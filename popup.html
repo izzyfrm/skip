@@ -1,7 +1,15 @@
 <!DOCTYPE html>
+
 <html>
+
 <head>
+
   <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
   <title>tune.</title>
 
@@ -9,17 +17,33 @@
     rel="stylesheet"
     href="popup.css"
   >
+
 </head>
 
 <body>
 
-  <main>
+  <main class="app">
 
-    <header>
+    <header class="header">
 
-      <div>
-        <h1>tune.</h1>
-        <p>YouTube customization</p>
+      <div class="brand">
+
+        <div class="logo">
+          t
+        </div>
+
+        <div>
+
+          <h1>
+            tune.
+          </h1>
+
+          <p>
+            Customize YouTube
+          </p>
+
+        </div>
+
       </div>
 
       <label class="switch">
@@ -29,21 +53,30 @@
           type="checkbox"
         >
 
-        <span></span>
+        <span class="slider"></span>
 
       </label>
 
     </header>
 
-    <section>
+    <section class="card">
 
-      <div class="row">
+      <div class="section-title">
+        Appearance
+      </div>
+
+      <div class="setting">
 
         <div>
-          <strong>Accent</strong>
-          <small>
-            Player + UI highlights
-          </small>
+
+          <strong>
+            Accent color
+          </strong>
+
+          <span>
+            Change YouTube highlights
+          </span>
+
         </div>
 
         <input
@@ -54,85 +87,109 @@
 
       </div>
 
-      <div class="presets">
+      <div class="colors">
 
         <button
+          class="color red"
           data-color="#ff0033"
-          class="red"
+          aria-label="Red"
         ></button>
 
         <button
+          class="color blue"
           data-color="#3b82f6"
-          class="blue"
+          aria-label="Blue"
         ></button>
 
         <button
+          class="color purple"
           data-color="#8b5cf6"
-          class="purple"
+          aria-label="Purple"
         ></button>
 
         <button
+          class="color green"
           data-color="#22c55e"
-          class="green"
+          aria-label="Green"
         ></button>
 
         <button
+          class="color white"
           data-color="#ffffff"
-          class="white"
+          aria-label="White"
         ></button>
 
       </div>
 
     </section>
 
-    <section>
+    <section class="card">
 
-      <label class="row">
+      <div class="section-title">
+        Interface
+      </div>
+
+      <label class="setting">
 
         <div>
-          <strong>Rounded UI</strong>
 
-          <small>
-            Round thumbnails + player
-          </small>
+          <strong>
+            Rounded UI
+          </strong>
+
+          <span>
+            Smooth thumbnails and player
+          </span>
+
         </div>
 
         <input
           id="rounded"
+          class="check"
           type="checkbox"
         >
 
       </label>
 
-      <label class="row">
+      <label class="setting">
 
         <div>
-          <strong>Channel overlay</strong>
 
-          <small>
-            Show creator on video
-          </small>
+          <strong>
+            Channel overlay
+          </strong>
+
+          <span>
+            Show creator on the player
+          </span>
+
         </div>
 
         <input
           id="channelOverlay"
+          class="check"
           type="checkbox"
         >
 
       </label>
 
-      <label class="row">
+      <label class="setting">
 
         <div>
-          <strong>Hide Shorts</strong>
 
-          <small>
-            Remove Shorts from YouTube
-          </small>
+          <strong>
+            Hide Shorts
+          </strong>
+
+          <span>
+            Remove Shorts shelves
+          </span>
+
         </div>
 
         <input
           id="hideShorts"
+          class="check"
           type="checkbox"
         >
 
@@ -141,7 +198,15 @@
     </section>
 
     <footer>
-      v0.1
+
+      <span>
+        tune.
+      </span>
+
+      <span>
+        v0.2
+      </span>
+
     </footer>
 
   </main>
@@ -149,4 +214,5 @@
   <script src="popup.js"></script>
 
 </body>
+
 </html>

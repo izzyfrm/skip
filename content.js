@@ -8,47 +8,55 @@ const defaults = {
 
 let settings = { ...defaults };
 
+let overlay = null;
+let lastChannel = "";
+let lastUrl = location.href;
+
 function applySettings() {
-  document.documentElement.style.setProperty(
+  const root = document.documentElement;
+
+  root.style.setProperty(
     "--tune-accent",
     settings.accent
   );
 
-  document.documentElement.classList.toggle(
+  root.classList.toggle(
     "tune-disabled",
     !settings.enabled
   );
 
-  document.documentElement.classList.toggle(
+  root.classList.toggle(
     "tune-rounded",
     settings.enabled && settings.rounded
   );
 
-  document.documentElement.classList.toggle(
+  root.classList.toggle(
     "tune-hide-shorts",
     settings.enabled && settings.hideShorts
   );
 
-  document.documentElement.classList.toggle(
-    "tune-channel-overlay",
+  root.classList.toggle(
+    "tune-channel-overlay-enabled",
     settings.enabled && settings.channelOverlay
   );
 
-  updateChannelOverlay();
+  syncOverlay();
 }
 
 function getChannelName() {
   const selectors = [
     "ytd-watch-metadata #channel-name a",
-    "ytd-watch-metadata #owner #channel-name",
-    "#upload-info #channel-name a",
-    "ytd-video-owner-renderer #channel-name a"
+    "ytd-watch-metadata #channel-name",
+    "ytd-video-owner-renderer #channel-name a",
+    "#upload-info #channel-name a"
   ];
 
   for (const selector of selectors) {
-    const element = document.querySelector(selector);
+    const element =
+      document.querySelector(selector);
 
-    const name = element?.textContent?.trim();
+    const name =
+      element?.textContent?.trim();
 
     if (name) {
       return name;
@@ -58,43 +66,63 @@ function getChannelName() {
   return "";
 }
 
-function updateChannelOverlay() {
-  let overlay = document.getElementById(
-    "tune-channel-overlay"
-  );
+function removeOverlay() {
+  if (overlay) {
+    overlay.remove();
+    overlay = null;
+  }
 
+  lastChannel = "";
+}
+
+function syncOverlay() {
   if (
     !settings.enabled ||
     !settings.channelOverlay ||
     !location.pathname.startsWith("/watch")
   ) {
-    overlay?.remove();
+    removeOverlay();
     return;
   }
 
-  const player = document.querySelector(
-    "#movie_player"
-  );
+  const player =
+    document.querySelector("#movie_player");
 
   if (!player) {
-    overlay?.remove();
     return;
   }
 
-  const channelName = getChannelName();
+  const channelName =
+    getChannelName();
 
   if (!channelName) {
     return;
   }
 
+  if (
+    overlay &&
+    overlay.parentElement !== player
+  ) {
+    removeOverlay();
+  }
+
   if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "tune-channel-overlay";
+    overlay =
+      document.createElement("div");
+
+    overlay.id =
+      "tune-channel-overlay";
 
     player.appendChild(overlay);
   }
 
-  overlay.textContent = channelName;
+  if (channelName !== lastChannel) {
+    overlay.textContent =
+      channelName;
+
+    lastChannel =
+      channelName;
+  }
 }
 
 chrome.storage.local.get(
@@ -111,27 +139,51 @@ chrome.storage.local.get(
 
 chrome.storage.onChanged.addListener(
   changes => {
-    for (const [key, value] of Object.entries(changes)) {
-      settings[key] = value.newValue;
+    for (
+      const [key, change]
+      of Object.entries(changes)
+    ) {
+      settings[key] =
+        change.newValue;
     }
 
     applySettings();
   }
 );
 
-const observer = new MutationObserver(() => {
+document.addEventListener(
+  "yt-navigate-finish",
+  () => {
+    lastUrl = location.href;
+
+    setTimeout(
+      syncOverlay,
+      300
+    );
+  }
+);
+
+document.addEventListener(
+  "yt-page-data-updated",
+  () => {
+    setTimeout(
+      syncOverlay,
+      250
+    );
+  }
+);
+
+setInterval(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+
+    syncOverlay();
+  }
+
   if (
     settings.enabled &&
     settings.channelOverlay
   ) {
-    updateChannelOverlay();
+    syncOverlay();
   }
-});
-
-observer.observe(
-  document.documentElement,
-  {
-    childList: true,
-    subtree: true
-  }
-);
+}, 1500);

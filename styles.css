@@ -1,82 +1,131 @@
 :root {
   --tune-accent: #3b82f6;
-  --tune-radius: 18px;
+  --tune-radius: 16px;
 }
 
-html:not(.tune-disabled) .ytp-play-progress,
-html:not(.tune-disabled) .ytp-scrubber-button {
-  background: var(--tune-accent) !important;
+/* accent */
+
+html:not(.tune-disabled)
+.ytp-play-progress {
+  background:
+    var(--tune-accent) !important;
 }
 
 html:not(.tune-disabled)
-ytd-guide-entry-renderer[active]
-yt-icon {
-  color: var(--tune-accent) !important;
+.ytp-scrubber-button {
+  background:
+    var(--tune-accent) !important;
+
+  border-color:
+    var(--tune-accent) !important;
 }
 
-html.tune-rounded:not(.tune-disabled)
-ytd-thumbnail img,
+html:not(.tune-disabled)
+yt-chip-cloud-chip-renderer[selected] {
+  --yt-spec-call-to-action:
+    var(--tune-accent) !important;
+}
+
+/* rounded ui */
 
 html.tune-rounded:not(.tune-disabled)
 ytd-rich-grid-media #thumbnail,
 
 html.tune-rounded:not(.tune-disabled)
-ytd-compact-video-renderer #thumbnail,
+ytd-video-renderer #thumbnail,
+
+html.tune-rounded:not(.tune-disabled)
+ytd-compact-video-renderer #thumbnail {
+  border-radius:
+    var(--tune-radius) !important;
+
+  overflow: hidden !important;
+}
 
 html.tune-rounded:not(.tune-disabled)
 #movie_player {
-  border-radius: var(--tune-radius) !important;
+  border-radius:
+    var(--tune-radius) !important;
+
   overflow: hidden !important;
 }
+
+/* shorts */
 
 html.tune-hide-shorts:not(.tune-disabled)
 ytd-reel-shelf-renderer,
 
 html.tune-hide-shorts:not(.tune-disabled)
-ytd-rich-shelf-renderer[is-shorts],
-
-html.tune-hide-shorts:not(.tune-disabled)
-a[title="Shorts"] {
+ytd-rich-shelf-renderer[is-shorts] {
   display: none !important;
 }
+
+/* channel overlay */
 
 #tune-channel-overlay {
   position: absolute;
 
-  left: 14px;
-  bottom: 56px;
+  left: 16px;
+  bottom: 58px;
 
   z-index: 70;
 
-  padding: 7px 11px;
+  max-width: 280px;
+
+  padding: 8px 12px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.12);
 
   border-radius: 999px;
 
-  background: rgba(0, 0, 0, 0.72);
+  background:
+    rgba(15, 15, 15, 0.78);
 
-  color: white;
+  color: #ffffff;
 
-  font-family: Arial, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
   font-size: 12px;
   font-weight: 600;
 
-  backdrop-filter: blur(10px);
+  white-space: nowrap;
 
-  pointer-events: none;
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  backdrop-filter:
+    blur(16px);
+
+  -webkit-backdrop-filter:
+    blur(16px);
+
+  box-shadow:
+    0 6px 24px
+    rgba(0, 0, 0, 0.22);
 
   opacity: 0;
 
-  transform: translateY(4px);
+  transform:
+    translateY(6px);
+
+  pointer-events: none;
 
   transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
-html.tune-channel-overlay:not(.tune-disabled)
+html.tune-channel-overlay-enabled
 #movie_player:hover
 #tune-channel-overlay {
   opacity: 1;
 
-  transform: translateY(0);
+  transform:
+    translateY(0);
 }

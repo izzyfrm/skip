@@ -6,106 +6,136 @@ const defaults = {
   channelOverlay: true
 };
 
-const enabled =
-  document.getElementById("enabled");
+const elements = {
+  enabled:
+    document.getElementById("enabled"),
 
-const accent =
-  document.getElementById("accent");
+  accent:
+    document.getElementById("accent"),
 
-const rounded =
-  document.getElementById("rounded");
+  rounded:
+    document.getElementById("rounded"),
 
-const hideShorts =
-  document.getElementById("hideShorts");
+  hideShorts:
+    document.getElementById("hideShorts"),
 
-const channelOverlay =
-  document.getElementById("channelOverlay");
+  channelOverlay:
+    document.getElementById("channelOverlay")
+};
+
+function updateAccentUI(color) {
+  document.documentElement.style.setProperty(
+    "--accent",
+    color
+  );
+
+  document
+    .querySelectorAll(".color")
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.color
+          .toLowerCase() ===
+        color.toLowerCase()
+      );
+    });
+}
 
 chrome.storage.local.get(
   defaults,
   settings => {
-    enabled.checked =
+    elements.enabled.checked =
       settings.enabled;
 
-    accent.value =
+    elements.accent.value =
       settings.accent;
 
-    rounded.checked =
+    elements.rounded.checked =
       settings.rounded;
 
-    hideShorts.checked =
+    elements.hideShorts.checked =
       settings.hideShorts;
 
-    channelOverlay.checked =
+    elements.channelOverlay.checked =
       settings.channelOverlay;
+
+    updateAccentUI(
+      settings.accent
+    );
   }
 );
 
-enabled.addEventListener(
+elements.enabled.addEventListener(
   "change",
   () => {
     chrome.storage.local.set({
-      enabled: enabled.checked
+      enabled:
+        elements.enabled.checked
     });
   }
 );
 
-accent.addEventListener(
+elements.accent.addEventListener(
   "input",
   () => {
+    const color =
+      elements.accent.value;
+
+    updateAccentUI(color);
+
     chrome.storage.local.set({
-      accent: accent.value
+      accent: color
     });
   }
 );
 
-rounded.addEventListener(
+elements.rounded.addEventListener(
   "change",
   () => {
     chrome.storage.local.set({
-      rounded: rounded.checked
+      rounded:
+        elements.rounded.checked
     });
   }
 );
 
-hideShorts.addEventListener(
+elements.hideShorts.addEventListener(
   "change",
   () => {
     chrome.storage.local.set({
-      hideShorts: hideShorts.checked
+      hideShorts:
+        elements.hideShorts.checked
     });
   }
 );
 
-channelOverlay.addEventListener(
+elements.channelOverlay.addEventListener(
   "change",
   () => {
     chrome.storage.local.set({
       channelOverlay:
-        channelOverlay.checked
+        elements.channelOverlay.checked
     });
   }
 );
 
 document
-  .querySelectorAll("[data-color]")
+  .querySelectorAll(".color")
   .forEach(button => {
-
     button.addEventListener(
       "click",
       () => {
-
         const color =
           button.dataset.color;
 
-        accent.value =
+        elements.accent.value =
           color;
+
+        updateAccentUI(color);
 
         chrome.storage.local.set({
           accent: color
         });
-
       }
     );
-
   });
