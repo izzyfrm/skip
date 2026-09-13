@@ -1,7 +1,8 @@
-let enabled = true;
-let lastSkip = 0;
+console.log("[skip.] loaded");
 
-chrome.storage.local.get(["enabled"], data => {
+let enabled = true;
+
+chrome.storage.local.get("enabled", data => {
   enabled = data.enabled ?? true;
 });
 
@@ -11,50 +12,54 @@ chrome.storage.onChanged.addListener(changes => {
   }
 });
 
-function visible(element) {
-  if (!element) return false;
+const selectors = [
+  ".ytp-skip-ad-button",
+  ".ytp-ad-skip-button",
+  ".ytp-ad-skip-button-modern",
+  ".ytp-ad-skip-button-slot button",
+  "button[class*='skip-ad']",
+  "[id*='skip-button'] button"
+];
 
-  const rect = element.getBoundingClientRect();
-  const style = getComputedStyle(element);
+function isVisible(el) {
+  if (!el) return false;
+
+  const rect = el.getBoundingClientRect();
 
   return (
-    rect.width > 5 &&
-    rect.height > 5 &&
-    style.display !== "none" &&
-    style.visibility !== "hidden" &&
-    Number(style.opacity) > 0
+    rect.width > 0 &&
+    rect.height > 0 &&
+    el.offsetParent !== null
   );
 }
 
 function findSkipButton() {
-  const selectors = [
-    ".ytp-skip-ad-button",
-    ".ytp-ad-skip-button-modern",
-    ".ytp-ad-skip-button",
-    "button[aria-label^='Skip']",
-    "button[aria-label*='Skip ad']"
-  ];
+  const player = document.querySelector("#movie_player");
+
+  if (!player) return null;
 
   for (const selector of selectors) {
-    const buttons = document.querySelectorAll(selector);
+    const buttons = player.querySelectorAll(selector);
 
     for (const button of buttons) {
-      if (visible(button)) {
+      if (isVisible(button)) {
         return button;
       }
     }
   }
 
-  const buttons = document.querySelectorAll("button");
-
-  for (const button of buttons) {
-    const text = button.textContent.trim().toLowerCase();
+  for (const button of player.querySelectorAll("button")) {
+    const text = (
+      button.innerText ||
+      button.getAttribute("aria-label") ||
+      ""
+    ).toLowerCase();
 
     if (
-      visible(button) &&
+      isVisible(button) &&
       (
+        text.includes("skip ad") ||
         text === "skip" ||
-        text === "skip ad" ||
         text === "skip ads"
       )
     ) {
@@ -72,24 +77,11 @@ function check() {
 
   if (!button) return;
 
-  const now = Date.now();
+  console.log("[skip.] found skip button");
 
-  if (now - lastSkip < 1500) return;
+  button.click();
 
-  const rect = button.getBoundingClientRect();
-
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-
-  lastSkip = now;
-
-  console.log("[skip.] visible skip button found");
-
-  chrome.runtime.sendMessage({
-    type: "skip-ad",
-    x,
-    y
-  });
+  console.log("[skip.] clicked");
 }
 
 const observer = new MutationObserver(check);
@@ -100,4 +92,4 @@ observer.observe(document.documentElement, {
   attributes: true
 });
 
-setInterval(check, 300);
+setInterval(check, 250);

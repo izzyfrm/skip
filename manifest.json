@@ -1,15 +1,11 @@
 {
   "manifest_version": 3,
   "name": "skip.",
-  "version": "1.1.0",
-  "description": "Automatically presses YouTube's Skip Ad button.",
+  "version": "1.2.0",
+  "description": "Automatically skips skippable YouTube ads.",
   "permissions": [
-    "storage",
-    "debugger"
+    "storage"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "action": {
     "default_popup": "popup.html"
   },
