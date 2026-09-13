@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "skip.",
+  "version": "1.0.0",
+  "description": "A simple YouTube quality-of-life extension.",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
