@@ -2,9 +2,9 @@ console.log("[skip.] loaded");
 
 let enabled = true;
 
-let inAd = false;
-let savedRate = 1;
-let savedMuted = false;
+let handlingAd = false;
+let oldRate = 1;
+let oldMuted = false;
 
 chrome.storage.local.get("enabled", data => {
   enabled = data.enabled ?? true;
@@ -16,27 +16,35 @@ chrome.storage.onChanged.addListener(changes => {
   }
 });
 
-function getPlayer() {
+function player() {
   return document.querySelector("#movie_player");
 }
 
-function getVideo() {
-  return document.querySelector("#movie_player video.html5-main-video")
-    || document.querySelector("video");
+function video() {
+  return (
+    document.querySelector("#movie_player video.html5-main-video") ||
+    document.querySelector("video")
+  );
 }
 
-function isAdPlaying() {
-  const player = getPlayer();
+function visible(el) {
+  if (!el) return false;
 
-  return !!player && (
-    player.classList.contains("ad-showing") ||
-    player.classList.contains("ad-interrupting")
+  const rect = el.getBoundingClientRect();
+  const style = getComputedStyle(el);
+
+  return (
+    rect.width > 0 &&
+    rect.height > 0 &&
+    style.display !== "none" &&
+    style.visibility !== "hidden"
   );
 }
 
 function getSkipButton() {
-  const player = getPlayer();
-  if (!player) return null;
+  const p = player();
+
+  if (!p) return null;
 
   const selectors = [
     ".ytp-skip-ad-button",
@@ -44,90 +52,145 @@ function getSkipButton() {
     ".ytp-ad-skip-button-modern",
     ".ytp-ad-skip-button-slot button",
     ".ytp-ad-skip-button-container button",
-    ".ytp-ad-player-overlay-layout__skip-or-preview-container button"
+    "button[class*='skip-ad']",
+    "[id*='skip-button'] button"
   ];
 
   for (const selector of selectors) {
-    const button = player.querySelector(selector);
+    const elements = p.querySelectorAll(selector);
 
-    if (!button) continue;
-
-    const rect = button.getBoundingClientRect();
-
-    if (rect.width > 0 && rect.height > 0) {
-      return button;
+    for (const el of elements) {
+      if (visible(el)) {
+        return el;
+      }
     }
   }
 
   return null;
 }
 
-function enterAd(video) {
-  if (inAd) return;
+function adDetected() {
+  const p = player();
 
-  inAd = true;
+  if (!p) return false;
 
-  savedRate = video.playbackRate;
-  savedMuted = video.muted;
+  if (
+    p.classList.contains("ad-showing") ||
+    p.classList.contains("ad-interrupting")
+  ) {
+    return true;
+  }
 
-  console.log("[skip.] ad detected");
+  if (getSkipButton()) {
+    return true;
+  }
+
+  const markers = [
+    ".ytp-ad-countdown",
+    ".ytp-ad-simple-ad-badge",
+    ".ytp-ad-persistent-progress-bar-container",
+    ".ytp-ad-player-overlay-layout",
+    ".ytp-ad-preview-container",
+    ".ytp-ad-text",
+    ".ytp-ad-player-overlay"
+  ];
+
+  for (const selector of markers) {
+    const elements = p.querySelectorAll(selector);
+
+    for (const el of elements) {
+      if (visible(el)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
-function leaveAd(video) {
-  if (!inAd) return;
+function startAd(v) {
+  if (handlingAd) return;
 
-  inAd = false;
+  handlingAd = true;
 
-  video.playbackRate = savedRate;
-  video.muted = savedMuted;
+  oldRate = v.playbackRate;
+  oldMuted = v.muted;
+
+  console.log("[skip.] AD DETECTED");
+}
+
+function finishAd(v) {
+  if (!handlingAd) return;
+
+  handlingAd = false;
+
+  v.playbackRate = oldRate;
+  v.muted = oldMuted;
 
   console.log("[skip.] content resumed");
 }
 
-function handleAd() {
+function handle() {
   if (!enabled) return;
 
-  const video = getVideo();
+  const v = video();
 
-  if (!video) return;
-
-  if (!isAdPlaying()) {
-    leaveAd(video);
-    return;
-  }
-
-  enterAd(video);
+  if (!v) return;
 
   const skip = getSkipButton();
+  const ad = adDetected();
 
-  if (skip) {
-    skip.click();
-  }
-
-  if (!isAdPlaying()) {
+  if (!ad) {
+    finishAd(v);
     return;
   }
 
-  video.muted = true;
+  startAd(v);
 
-  if (
-    Number.isFinite(video.duration) &&
-    video.duration > 0 &&
-    video.duration < 600
-  ) {
+  if (skip) {
+    console.log("[skip.] skip button found");
+
+    skip.click();
+
     try {
-      video.currentTime = Math.max(
-        video.currentTime,
-        video.duration - 0.05
+      skip.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        })
       );
     } catch {}
   }
 
-  video.playbackRate = 16;
+  v.muted = true;
 
-  if (video.paused) {
-    video.play().catch(() => {});
+  if (
+    Number.isFinite(v.duration) &&
+    v.duration > 0 &&
+    v.duration < 600
+  ) {
+    try {
+      v.currentTime = Math.max(
+        v.currentTime,
+        v.duration - 0.1
+      );
+    } catch {}
+  }
+
+  v.playbackRate = 16;
+
+  if (v.paused) {
+    v.play().catch(() => {});
   }
 }
 
-setInterval(handleAd, 100);
+const observer = new MutationObserver(handle);
+
+observer.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true
+});
+
+setInterval(handle, 150);
