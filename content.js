@@ -1,7 +1,10 @@
 console.log("[skip.] loaded");
 
 let enabled = true;
-let lastAction = 0;
+
+let inAd = false;
+let savedRate = 1;
+let savedMuted = false;
 
 chrome.storage.local.get("enabled", data => {
   enabled = data.enabled ?? true;
@@ -13,150 +16,118 @@ chrome.storage.onChanged.addListener(changes => {
   }
 });
 
-function visible(el) {
-  if (!el) return false;
+function getPlayer() {
+  return document.querySelector("#movie_player");
+}
 
-  const rect = el.getBoundingClientRect();
+function getVideo() {
+  return document.querySelector("#movie_player video.html5-main-video")
+    || document.querySelector("video");
+}
 
-  return (
-    rect.width > 0 &&
-    rect.height > 0 &&
-    el.offsetParent !== null
+function isAdPlaying() {
+  const player = getPlayer();
+
+  return !!player && (
+    player.classList.contains("ad-showing") ||
+    player.classList.contains("ad-interrupting")
   );
 }
 
-function findSkipButton() {
+function getSkipButton() {
+  const player = getPlayer();
+  if (!player) return null;
+
   const selectors = [
     ".ytp-skip-ad-button",
     ".ytp-ad-skip-button",
     ".ytp-ad-skip-button-modern",
     ".ytp-ad-skip-button-slot button",
-    "button[aria-label*='Skip']",
-    "button[aria-label*='skip']"
+    ".ytp-ad-skip-button-container button",
+    ".ytp-ad-player-overlay-layout__skip-or-preview-container button"
   ];
 
   for (const selector of selectors) {
-    const elements = document.querySelectorAll(selector);
+    const button = player.querySelector(selector);
 
-    for (const el of elements) {
-      if (!visible(el)) continue;
+    if (!button) continue;
 
-      const button =
-        el.matches("button")
-          ? el
-          : el.closest("button") || el.querySelector("button") || el;
+    const rect = button.getBoundingClientRect();
 
-      if (visible(button)) {
-        return button;
-      }
+    if (rect.width > 0 && rect.height > 0) {
+      return button;
     }
   }
 
   return null;
 }
 
-function realClick(button) {
-  const rect = button.getBoundingClientRect();
+function enterAd(video) {
+  if (inAd) return;
 
-  const options = {
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-    clientX: rect.left + rect.width / 2,
-    clientY: rect.top + rect.height / 2
-  };
+  inAd = true;
 
-  button.focus();
+  savedRate = video.playbackRate;
+  savedMuted = video.muted;
 
-  button.dispatchEvent(
-    new PointerEvent("pointerdown", {
-      ...options,
-      pointerId: 1,
-      pointerType: "mouse",
-      isPrimary: true
-    })
-  );
-
-  button.dispatchEvent(
-    new MouseEvent("mousedown", options)
-  );
-
-  button.dispatchEvent(
-    new PointerEvent("pointerup", {
-      ...options,
-      pointerId: 1,
-      pointerType: "mouse",
-      isPrimary: true
-    })
-  );
-
-  button.dispatchEvent(
-    new MouseEvent("mouseup", options)
-  );
-
-  button.click();
+  console.log("[skip.] ad detected");
 }
 
-function adIsPlaying() {
-  return document
-    .querySelector("#movie_player")
-    ?.classList.contains("ad-showing");
+function leaveAd(video) {
+  if (!inAd) return;
+
+  inAd = false;
+
+  video.playbackRate = savedRate;
+  video.muted = savedMuted;
+
+  console.log("[skip.] content resumed");
 }
 
-function fallbackSkip() {
-  if (!adIsPlaying()) return;
+function handleAd() {
+  if (!enabled) return;
 
-  const video = document.querySelector("video");
+  const video = getVideo();
 
   if (!video) return;
 
+  if (!isAdPlaying()) {
+    leaveAd(video);
+    return;
+  }
+
+  enterAd(video);
+
+  const skip = getSkipButton();
+
+  if (skip) {
+    skip.click();
+  }
+
+  if (!isAdPlaying()) {
+    return;
+  }
+
+  video.muted = true;
+
   if (
     Number.isFinite(video.duration) &&
-    video.duration > 0
+    video.duration > 0 &&
+    video.duration < 600
   ) {
-    console.log("[skip.] using fallback");
-
     try {
       video.currentTime = Math.max(
-        0,
-        video.duration - 0.1
+        video.currentTime,
+        video.duration - 0.05
       );
     } catch {}
   }
+
+  video.playbackRate = 16;
+
+  if (video.paused) {
+    video.play().catch(() => {});
+  }
 }
 
-function check() {
-  if (!enabled) return;
-
-  const button = findSkipButton();
-
-  if (!button) return;
-
-  const now = Date.now();
-
-  if (now - lastAction < 1500) return;
-
-  lastAction = now;
-
-  console.log("[skip.] skip button found");
-
-  realClick(button);
-
-  setTimeout(() => {
-    if (adIsPlaying()) {
-      fallbackSkip();
-    } else {
-      console.log("[skip.] ad skipped ✓");
-    }
-  }, 600);
-}
-
-const observer = new MutationObserver(check);
-
-observer.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true
-});
-
-setInterval(check, 300);
+setInterval(handleAd, 100);
