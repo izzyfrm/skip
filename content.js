@@ -1,196 +1,137 @@
-console.log("[skip.] loaded");
+const defaults = {
+  enabled: true,
+  accent: "#3b82f6",
+  rounded: true,
+  hideShorts: false,
+  channelOverlay: true
+};
 
-let enabled = true;
+let settings = { ...defaults };
 
-let handlingAd = false;
-let oldRate = 1;
-let oldMuted = false;
-
-chrome.storage.local.get("enabled", data => {
-  enabled = data.enabled ?? true;
-});
-
-chrome.storage.onChanged.addListener(changes => {
-  if (changes.enabled) {
-    enabled = changes.enabled.newValue;
-  }
-});
-
-function player() {
-  return document.querySelector("#movie_player");
-}
-
-function video() {
-  return (
-    document.querySelector("#movie_player video.html5-main-video") ||
-    document.querySelector("video")
+function applySettings() {
+  document.documentElement.style.setProperty(
+    "--tune-accent",
+    settings.accent
   );
-}
 
-function visible(el) {
-  if (!el) return false;
-
-  const rect = el.getBoundingClientRect();
-  const style = getComputedStyle(el);
-
-  return (
-    rect.width > 0 &&
-    rect.height > 0 &&
-    style.display !== "none" &&
-    style.visibility !== "hidden"
+  document.documentElement.classList.toggle(
+    "tune-disabled",
+    !settings.enabled
   );
+
+  document.documentElement.classList.toggle(
+    "tune-rounded",
+    settings.enabled && settings.rounded
+  );
+
+  document.documentElement.classList.toggle(
+    "tune-hide-shorts",
+    settings.enabled && settings.hideShorts
+  );
+
+  document.documentElement.classList.toggle(
+    "tune-channel-overlay",
+    settings.enabled && settings.channelOverlay
+  );
+
+  updateChannelOverlay();
 }
 
-function getSkipButton() {
-  const p = player();
-
-  if (!p) return null;
-
+function getChannelName() {
   const selectors = [
-    ".ytp-skip-ad-button",
-    ".ytp-ad-skip-button",
-    ".ytp-ad-skip-button-modern",
-    ".ytp-ad-skip-button-slot button",
-    ".ytp-ad-skip-button-container button",
-    "button[class*='skip-ad']",
-    "[id*='skip-button'] button"
+    "ytd-watch-metadata #channel-name a",
+    "ytd-watch-metadata #owner #channel-name",
+    "#upload-info #channel-name a",
+    "ytd-video-owner-renderer #channel-name a"
   ];
 
   for (const selector of selectors) {
-    const elements = p.querySelectorAll(selector);
+    const element = document.querySelector(selector);
 
-    for (const el of elements) {
-      if (visible(el)) {
-        return el;
-      }
+    const name = element?.textContent?.trim();
+
+    if (name) {
+      return name;
     }
   }
 
-  return null;
+  return "";
 }
 
-function adDetected() {
-  const p = player();
-
-  if (!p) return false;
+function updateChannelOverlay() {
+  let overlay = document.getElementById(
+    "tune-channel-overlay"
+  );
 
   if (
-    p.classList.contains("ad-showing") ||
-    p.classList.contains("ad-interrupting")
+    !settings.enabled ||
+    !settings.channelOverlay ||
+    !location.pathname.startsWith("/watch")
   ) {
-    return true;
-  }
-
-  if (getSkipButton()) {
-    return true;
-  }
-
-  const markers = [
-    ".ytp-ad-countdown",
-    ".ytp-ad-simple-ad-badge",
-    ".ytp-ad-persistent-progress-bar-container",
-    ".ytp-ad-player-overlay-layout",
-    ".ytp-ad-preview-container",
-    ".ytp-ad-text",
-    ".ytp-ad-player-overlay"
-  ];
-
-  for (const selector of markers) {
-    const elements = p.querySelectorAll(selector);
-
-    for (const el of elements) {
-      if (visible(el)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function startAd(v) {
-  if (handlingAd) return;
-
-  handlingAd = true;
-
-  oldRate = v.playbackRate;
-  oldMuted = v.muted;
-
-  console.log("[skip.] AD DETECTED");
-}
-
-function finishAd(v) {
-  if (!handlingAd) return;
-
-  handlingAd = false;
-
-  v.playbackRate = oldRate;
-  v.muted = oldMuted;
-
-  console.log("[skip.] content resumed");
-}
-
-function handle() {
-  if (!enabled) return;
-
-  const v = video();
-
-  if (!v) return;
-
-  const skip = getSkipButton();
-  const ad = adDetected();
-
-  if (!ad) {
-    finishAd(v);
+    overlay?.remove();
     return;
   }
 
-  startAd(v);
+  const player = document.querySelector(
+    "#movie_player"
+  );
 
-  if (skip) {
-    console.log("[skip.] skip button found");
-
-    skip.click();
-
-    try {
-      skip.dispatchEvent(
-        new MouseEvent("click", {
-          bubbles: true,
-          cancelable: true,
-          view: window
-        })
-      );
-    } catch {}
+  if (!player) {
+    overlay?.remove();
+    return;
   }
 
-  v.muted = true;
+  const channelName = getChannelName();
 
-  if (
-    Number.isFinite(v.duration) &&
-    v.duration > 0 &&
-    v.duration < 600
-  ) {
-    try {
-      v.currentTime = Math.max(
-        v.currentTime,
-        v.duration - 0.1
-      );
-    } catch {}
+  if (!channelName) {
+    return;
   }
 
-  v.playbackRate = 16;
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "tune-channel-overlay";
 
-  if (v.paused) {
-    v.play().catch(() => {});
+    player.appendChild(overlay);
   }
+
+  overlay.textContent = channelName;
 }
 
-const observer = new MutationObserver(handle);
+chrome.storage.local.get(
+  defaults,
+  data => {
+    settings = {
+      ...defaults,
+      ...data
+    };
 
-observer.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true
+    applySettings();
+  }
+);
+
+chrome.storage.onChanged.addListener(
+  changes => {
+    for (const [key, value] of Object.entries(changes)) {
+      settings[key] = value.newValue;
+    }
+
+    applySettings();
+  }
+);
+
+const observer = new MutationObserver(() => {
+  if (
+    settings.enabled &&
+    settings.channelOverlay
+  ) {
+    updateChannelOverlay();
+  }
 });
 
-setInterval(handle, 150);
+observer.observe(
+  document.documentElement,
+  {
+    childList: true,
+    subtree: true
+  }
+);

@@ -2,49 +2,151 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>skip.</title>
 
-  <style>
-    body {
-      width: 220px;
-      margin: 0;
-      padding: 18px;
-      background: #0d0d0d;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
+  <title>tune.</title>
 
-    h1 {
-      font-size: 18px;
-      margin: 0 0 16px;
-    }
-
-    button {
-      width: 100%;
-      border: none;
-      border-radius: 10px;
-      padding: 11px;
-      background: #ffffff;
-      color: #000000;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    p {
-      opacity: 0.5;
-      font-size: 11px;
-      margin-top: 12px;
-    }
-  </style>
+  <link
+    rel="stylesheet"
+    href="popup.css"
+  >
 </head>
 
 <body>
-  <h1>skip.</h1>
 
-  <button id="toggle">Loading...</button>
+  <main>
 
-  <p>YouTube, without the interruptions.</p>
+    <header>
+
+      <div>
+        <h1>tune.</h1>
+        <p>YouTube customization</p>
+      </div>
+
+      <label class="switch">
+
+        <input
+          id="enabled"
+          type="checkbox"
+        >
+
+        <span></span>
+
+      </label>
+
+    </header>
+
+    <section>
+
+      <div class="row">
+
+        <div>
+          <strong>Accent</strong>
+          <small>
+            Player + UI highlights
+          </small>
+        </div>
+
+        <input
+          id="accent"
+          type="color"
+          value="#3b82f6"
+        >
+
+      </div>
+
+      <div class="presets">
+
+        <button
+          data-color="#ff0033"
+          class="red"
+        ></button>
+
+        <button
+          data-color="#3b82f6"
+          class="blue"
+        ></button>
+
+        <button
+          data-color="#8b5cf6"
+          class="purple"
+        ></button>
+
+        <button
+          data-color="#22c55e"
+          class="green"
+        ></button>
+
+        <button
+          data-color="#ffffff"
+          class="white"
+        ></button>
+
+      </div>
+
+    </section>
+
+    <section>
+
+      <label class="row">
+
+        <div>
+          <strong>Rounded UI</strong>
+
+          <small>
+            Round thumbnails + player
+          </small>
+        </div>
+
+        <input
+          id="rounded"
+          type="checkbox"
+        >
+
+      </label>
+
+      <label class="row">
+
+        <div>
+          <strong>Channel overlay</strong>
+
+          <small>
+            Show creator on video
+          </small>
+        </div>
+
+        <input
+          id="channelOverlay"
+          type="checkbox"
+        >
+
+      </label>
+
+      <label class="row">
+
+        <div>
+          <strong>Hide Shorts</strong>
+
+          <small>
+            Remove Shorts from YouTube
+          </small>
+        </div>
+
+        <input
+          id="hideShorts"
+          type="checkbox"
+        >
+
+      </label>
+
+    </section>
+
+    <footer>
+      v0.1
+    </footer>
+
+  </main>
 
   <script src="popup.js"></script>
+
 </body>
 </html>

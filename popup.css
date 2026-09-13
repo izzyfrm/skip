@@ -1,0 +1,207 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+
+  margin: 0;
+
+  background: #111214;
+
+  color: #f5f5f5;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+main {
+  padding: 16px;
+}
+
+header,
+.row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 14px;
+}
+
+header {
+  margin-bottom: 14px;
+}
+
+h1 {
+  margin: 0;
+
+  font-size: 20px;
+
+  letter-spacing: -0.4px;
+}
+
+p {
+  margin: 2px 0 0;
+
+  color: #8f9399;
+
+  font-size: 12px;
+}
+
+section {
+  margin-top: 10px;
+
+  padding: 12px;
+
+  background: #181a1d;
+
+  border: 1px solid #24272b;
+
+  border-radius: 16px;
+}
+
+.row {
+  min-height: 46px;
+}
+
+.row + .row {
+  border-top: 1px solid #24272b;
+}
+
+strong {
+  display: block;
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #8f9399;
+
+  font-size: 11px;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+
+  accent-color: #3b82f6;
+}
+
+input[type="color"] {
+  width: 34px;
+  height: 34px;
+
+  padding: 0;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: transparent;
+
+  cursor: pointer;
+}
+
+.presets {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 10px;
+}
+
+.presets button {
+  width: 28px;
+  height: 28px;
+
+  border: 1px solid #34373c;
+
+  border-radius: 100%;
+
+  cursor: pointer;
+}
+
+.red {
+  background: #ff0033;
+}
+
+.blue {
+  background: #3b82f6;
+}
+
+.purple {
+  background: #8b5cf6;
+}
+
+.green {
+  background: #22c55e;
+}
+
+.white {
+  background: #ffffff;
+}
+
+.switch input {
+  display: none;
+}
+
+.switch span {
+  display: block;
+
+  width: 42px;
+  height: 24px;
+
+  padding: 3px;
+
+  border-radius: 999px;
+
+  background: #34373c;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.switch span::after {
+  content: "";
+
+  display: block;
+
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+
+  background: white;
+
+  transition: 0.2s;
+}
+
+.switch input:checked + span {
+  background: #3b82f6;
+}
+
+.switch input:checked + span::after {
+  transform: translateX(18px);
+}
+
+footer {
+  margin-top: 12px;
+
+  color: #62666d;
+
+  font-size: 10px;
+
+  text-align: center;
+}

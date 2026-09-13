@@ -1,0 +1,82 @@
+:root {
+  --tune-accent: #3b82f6;
+  --tune-radius: 18px;
+}
+
+html:not(.tune-disabled) .ytp-play-progress,
+html:not(.tune-disabled) .ytp-scrubber-button {
+  background: var(--tune-accent) !important;
+}
+
+html:not(.tune-disabled)
+ytd-guide-entry-renderer[active]
+yt-icon {
+  color: var(--tune-accent) !important;
+}
+
+html.tune-rounded:not(.tune-disabled)
+ytd-thumbnail img,
+
+html.tune-rounded:not(.tune-disabled)
+ytd-rich-grid-media #thumbnail,
+
+html.tune-rounded:not(.tune-disabled)
+ytd-compact-video-renderer #thumbnail,
+
+html.tune-rounded:not(.tune-disabled)
+#movie_player {
+  border-radius: var(--tune-radius) !important;
+  overflow: hidden !important;
+}
+
+html.tune-hide-shorts:not(.tune-disabled)
+ytd-reel-shelf-renderer,
+
+html.tune-hide-shorts:not(.tune-disabled)
+ytd-rich-shelf-renderer[is-shorts],
+
+html.tune-hide-shorts:not(.tune-disabled)
+a[title="Shorts"] {
+  display: none !important;
+}
+
+#tune-channel-overlay {
+  position: absolute;
+
+  left: 14px;
+  bottom: 56px;
+
+  z-index: 70;
+
+  padding: 7px 11px;
+
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.72);
+
+  color: white;
+
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+
+  backdrop-filter: blur(10px);
+
+  pointer-events: none;
+
+  opacity: 0;
+
+  transform: translateY(4px);
+
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+html.tune-channel-overlay:not(.tune-disabled)
+#movie_player:hover
+#tune-channel-overlay {
+  opacity: 1;
+
+  transform: translateY(0);
+}
