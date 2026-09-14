@@ -1,218 +1,45 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
-  <title>tune.</title>
-
-  <link
-    rel="stylesheet"
-    href="popup.css"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhance</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
-
   <main class="app">
-
-    <header class="header">
-
-      <div class="brand">
-
-        <div class="logo">
-          t
-        </div>
-
-        <div>
-
-          <h1>
-            tune.
-          </h1>
-
-          <p>
-            Customize YouTube
-          </p>
-
-        </div>
-
+    <div class="top">
+      <div>
+        <h1>Enhance</h1>
+        <p id="statusText">Video enhancement is off</p>
       </div>
 
       <label class="switch">
-
-        <input
-          id="enabled"
-          type="checkbox"
-        >
-
+        <input id="enhanceToggle" type="checkbox">
         <span class="slider"></span>
-
       </label>
+    </div>
 
-    </header>
-
-    <section class="card">
-
-      <div class="section-title">
-        Appearance
-      </div>
-
-      <div class="setting">
-
-        <div>
-
-          <strong>
-            Accent color
-          </strong>
-
-          <span>
-            Change YouTube highlights
-          </span>
-
-        </div>
-
-        <input
-          id="accent"
-          type="color"
-          value="#3b82f6"
-        >
-
-      </div>
-
-      <div class="colors">
-
-        <button
-          class="color red"
-          data-color="#ff0033"
-          aria-label="Red"
-        ></button>
-
-        <button
-          class="color blue"
-          data-color="#3b82f6"
-          aria-label="Blue"
-        ></button>
-
-        <button
-          class="color purple"
-          data-color="#8b5cf6"
-          aria-label="Purple"
-        ></button>
-
-        <button
-          class="color green"
-          data-color="#22c55e"
-          aria-label="Green"
-        ></button>
-
-        <button
-          class="color white"
-          data-color="#ffffff"
-          aria-label="White"
-        ></button>
-
-      </div>
-
-    </section>
-
-    <section class="card">
-
-      <div class="section-title">
-        Interface
-      </div>
-
-      <label class="setting">
-
-        <div>
-
-          <strong>
-            Rounded UI
-          </strong>
-
-          <span>
-            Smooth thumbnails and player
-          </span>
-
-        </div>
-
-        <input
-          id="rounded"
-          class="check"
-          type="checkbox"
-        >
-
-      </label>
-
-      <label class="setting">
-
-        <div>
-
-          <strong>
-            Channel overlay
-          </strong>
-
-          <span>
-            Show creator on the player
-          </span>
-
-        </div>
-
-        <input
-          id="channelOverlay"
-          class="check"
-          type="checkbox"
-        >
-
-      </label>
-
-      <label class="setting">
-
-        <div>
-
-          <strong>
-            Hide Shorts
-          </strong>
-
-          <span>
-            Remove Shorts shelves
-          </span>
-
-        </div>
-
-        <input
-          id="hideShorts"
-          class="check"
-          type="checkbox"
-        >
-
-      </label>
-
-    </section>
-
-    <footer>
-
-      <span>
-        tune.
+    <button id="compareButton" class="compare-button" disabled>
+      <span class="compare-icon">
+        <span></span>
       </span>
 
-      <span>
-        v0.2
+      <span class="compare-copy">
+        <strong>Before & After</strong>
+        <small>Compare original and enhanced video</small>
       </span>
 
-    </footer>
+      <span class="arrow">›</span>
+    </button>
 
+    <div class="footer">
+      <span class="dot"></span>
+      <span>Works automatically on YouTube</span>
+    </div>
   </main>
 
   <script src="popup.js"></script>
-
 </body>
-
 </html>

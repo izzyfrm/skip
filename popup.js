@@ -1,141 +1,114 @@
-const defaults = {
-  enabled: true,
-  accent: "#3b82f6",
-  rounded: true,
-  hideShorts: false,
-  channelOverlay: true
-};
+const toggle = document.getElementById("enhanceToggle");
+const compareButton = document.getElementById("compareButton");
+const statusText = document.getElementById("statusText");
 
-const elements = {
-  enabled:
-    document.getElementById("enabled"),
+let compareActive = false;
 
-  accent:
-    document.getElementById("accent"),
+async function getTab() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
+  });
 
-  rounded:
-    document.getElementById("rounded"),
-
-  hideShorts:
-    document.getElementById("hideShorts"),
-
-  channelOverlay:
-    document.getElementById("channelOverlay")
-};
-
-function updateAccentUI(color) {
-  document.documentElement.style.setProperty(
-    "--accent",
-    color
-  );
-
-  document
-    .querySelectorAll(".color")
-    .forEach(button => {
-      button.classList.toggle(
-        "active",
-        button.dataset.color
-          .toLowerCase() ===
-        color.toLowerCase()
-      );
-    });
+  return tab;
 }
 
-chrome.storage.local.get(
-  defaults,
-  settings => {
-    elements.enabled.checked =
-      settings.enabled;
+async function sendMessage(message) {
+  try {
+    const tab = await getTab();
 
-    elements.accent.value =
-      settings.accent;
+    if (!tab?.id) {
+      return null;
+    }
 
-    elements.rounded.checked =
-      settings.rounded;
-
-    elements.hideShorts.checked =
-      settings.hideShorts;
-
-    elements.channelOverlay.checked =
-      settings.channelOverlay;
-
-    updateAccentUI(
-      settings.accent
-    );
+    return await chrome.tabs.sendMessage(tab.id, message);
+  } catch {
+    return null;
   }
-);
+}
 
-elements.enabled.addEventListener(
-  "change",
-  () => {
-    chrome.storage.local.set({
-      enabled:
-        elements.enabled.checked
-    });
+function updateUI(enabled) {
+  toggle.checked = enabled;
+  compareButton.disabled = !enabled;
+
+  statusText.textContent = enabled
+    ? "Video enhancement is on"
+    : "Video enhancement is off";
+
+  if (!enabled) {
+    compareActive = false;
+    compareButton.classList.remove("active");
+
+    compareButton.querySelector("strong").textContent =
+      "Before & After";
   }
-);
+}
 
-elements.accent.addEventListener(
-  "input",
-  () => {
-    const color =
-      elements.accent.value;
-
-    updateAccentUI(color);
-
-    chrome.storage.local.set({
-      accent: color
-    });
-  }
-);
-
-elements.rounded.addEventListener(
-  "change",
-  () => {
-    chrome.storage.local.set({
-      rounded:
-        elements.rounded.checked
-    });
-  }
-);
-
-elements.hideShorts.addEventListener(
-  "change",
-  () => {
-    chrome.storage.local.set({
-      hideShorts:
-        elements.hideShorts.checked
-    });
-  }
-);
-
-elements.channelOverlay.addEventListener(
-  "change",
-  () => {
-    chrome.storage.local.set({
-      channelOverlay:
-        elements.channelOverlay.checked
-    });
-  }
-);
-
-document
-  .querySelectorAll(".color")
-  .forEach(button => {
-    button.addEventListener(
-      "click",
-      () => {
-        const color =
-          button.dataset.color;
-
-        elements.accent.value =
-          color;
-
-        updateAccentUI(color);
-
-        chrome.storage.local.set({
-          accent: color
-        });
-      }
-    );
+async function loadState() {
+  const saved = await chrome.storage.local.get({
+    enhanceEnabled: false
   });
+
+  updateUI(saved.enhanceEnabled);
+
+  const state = await sendMessage({
+    type: "GET_STATE"
+  });
+
+  if (state) {
+    compareActive = Boolean(state.compare);
+
+    compareButton.classList.toggle(
+      "active",
+      compareActive
+    );
+
+    compareButton.querySelector("strong").textContent =
+      compareActive
+        ? "Exit comparison"
+        : "Before & After";
+  }
+}
+
+toggle.addEventListener("change", async () => {
+  const enabled = toggle.checked;
+
+  await chrome.storage.local.set({
+    enhanceEnabled: enabled
+  });
+
+  updateUI(enabled);
+
+  await sendMessage({
+    type: "SET_ENABLED",
+    enabled
+  });
+});
+
+compareButton.addEventListener("click", async () => {
+  if (!toggle.checked) {
+    return;
+  }
+
+  const result = await sendMessage({
+    type: "TOGGLE_COMPARE"
+  });
+
+  if (!result) {
+    return;
+  }
+
+  compareActive = Boolean(result.compare);
+
+  compareButton.classList.toggle(
+    "active",
+    compareActive
+  );
+
+  compareButton.querySelector("strong").textContent =
+    compareActive
+      ? "Exit comparison"
+      : "Before & After";
+});
+
+loadState();
