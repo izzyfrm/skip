@@ -1,8 +1,9 @@
 #enhance-comparison-layer {
-  position: absolute;
+  position: absolute !important;
   pointer-events: none;
   overflow: hidden;
-  z-index: 5;
+  z-index: 999999 !important;
+  border-radius: inherit;
 }
 
 #enhance-comparison-canvas {
@@ -18,63 +19,96 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 2px;
-  z-index: 8;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.2),
-    0 0 16px rgba(0, 0, 0, 0.35);
+
+  width: 3px;
+
+  background: #ffffff;
+
+  z-index: 1000000 !important;
+
   pointer-events: auto;
   cursor: ew-resize;
-  transform: translateX(-1px);
+
+  transform: translateX(-50%);
+
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 #enhance-divider::after {
   content: "‹ ›";
+
   position: absolute;
-  width: 34px;
-  height: 34px;
+
+  width: 40px;
+  height: 40px;
+
   left: 50%;
   top: 50%;
+
   transform: translate(-50%, -50%);
+
   border-radius: 50%;
-  background: rgba(18, 18, 20, 0.82);
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  color: white;
-  display: grid;
-  place-items: center;
-  font-size: 15px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(15, 15, 17, 0.92);
+
+  border: 2px solid #ffffff;
+
+  color: #ffffff;
+
   font-family:
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 1px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.38);
+
+  backdrop-filter: blur(15px);
+
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(255, 255, 255, 0.3);
 }
 
 .enhance-label {
   position: absolute;
+
   top: 18px;
-  z-index: 9;
-  padding: 7px 11px;
+
+  z-index: 1000001 !important;
+
+  padding: 7px 12px;
+
   border-radius: 999px;
-  background: rgba(12, 12, 14, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.93);
+
+  background: rgba(10, 10, 12, 0.82);
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  color: white;
+
   font-family:
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.1px;
+
   pointer-events: none;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 #enhance-label-original {
@@ -86,13 +120,16 @@
 }
 
 #enhance-comparison-layer.enhance-hidden {
-  display: none;
+  display: none !important;
 }
 
 #enhance-filter-svg {
   position: fixed;
+
   width: 0;
   height: 0;
-  pointer-events: none;
+
   opacity: 0;
+
+  pointer-events: none;
 }

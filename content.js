@@ -205,44 +205,53 @@ function updateOverlayLayout() {
     return;
   }
 
-  const videoRect = video.getBoundingClientRect();
-  const parentRect = parent.getBoundingClientRect();
+  const videoRect =
+    video.getBoundingClientRect();
 
-  const width = videoRect.width;
-  const height = videoRect.height;
+  const parentRect =
+    parent.getBoundingClientRect();
 
-  if (!width || !height) {
+  if (
+    videoRect.width <= 0 ||
+    videoRect.height <= 0
+  ) {
     return;
   }
 
-  overlay.style.left =
-    `${videoRect.left - parentRect.left}px`;
+  const left =
+    videoRect.left - parentRect.left;
 
-  overlay.style.top =
-    `${videoRect.top - parentRect.top}px`;
+  const top =
+    videoRect.top - parentRect.top;
 
-  overlay.style.width = `${width}px`;
-  overlay.style.height = `${height}px`;
+  overlay.style.left = `${left}px`;
+  overlay.style.top = `${top}px`;
 
-  const pixelRatio = Math.min(
+  overlay.style.width =
+    `${videoRect.width}px`;
+
+  overlay.style.height =
+    `${videoRect.height}px`;
+
+  const scale = Math.min(
     window.devicePixelRatio || 1,
     1.25
   );
 
-  const targetWidth = Math.round(
-    width * pixelRatio
+  const width = Math.floor(
+    videoRect.width * scale
   );
 
-  const targetHeight = Math.round(
-    height * pixelRatio
+  const height = Math.floor(
+    videoRect.height * scale
   );
 
   if (
-    canvas.width !== targetWidth ||
-    canvas.height !== targetHeight
+    canvas.width !== width ||
+    canvas.height !== height
   ) {
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+    canvas.width = width;
+    canvas.height = height;
   }
 
   updateComparisonPosition();
@@ -418,114 +427,57 @@ function drawFrame() {
   } catch {}
 }
 
-function findAndAttachVideo() {
-  const nextVideo = getVideo();
+function attachVideo(nextVideo) {
+  if (!nextVideo || nextVideo === video) {
+    return;
+  }
 
-  if (
-    nextVideo &&
-    nextVideo !== video
-  ) {
-    attachVideo(nextVideo);
-  } else if (
-    nextVideo &&
-    overlay
-  ) {
+  cleanupVideo();
+
+  video = nextVideo;
+
+  parent =
+    document.querySelector(".html5-video-player") ||
+    video.closest(".html5-video-container") ||
+    video.parentElement;
+
+  if (!parent) {
+    return;
+  }
+
+  originalInlineFilter =
+    video.style.filter || "";
+
+  const computedPosition =
+    getComputedStyle(parent).position;
+
+  if (computedPosition === "static") {
+    parent.style.position = "relative";
+  }
+
+  createComparisonUI();
+
+  resizeObserver = new ResizeObserver(() => {
     updateOverlayLayout();
-  }
+  });
+
+  resizeObserver.observe(video);
+
+  video.addEventListener(
+    "loadedmetadata",
+    updateOverlayLayout
+  );
+
+  updateMode();
+
+  setTimeout(() => {
+    updateOverlayLayout();
+  }, 100);
+
+  setTimeout(() => {
+    updateOverlayLayout();
+  }, 500);
 }
-
-chrome.runtime.onMessage.addListener(
-  (message, sender, sendResponse) => {
-    if (message.type === "SET_ENABLED") {
-      enabled = Boolean(
-        message.enabled
-      );
-
-      if (!enabled) {
-        compareMode = false;
-      }
-
-      updateMode();
-
-      sendResponse({
-        enabled,
-        compare: compareMode
-      });
-
-      return;
-    }
-
-    if (message.type === "TOGGLE_COMPARE") {
-      if (!enabled) {
-        sendResponse({
-          enabled,
-          compare: false
-        });
-
-        return;
-      }
-
-      compareMode = !compareMode;
-
-      updateMode();
-
-      sendResponse({
-        enabled,
-        compare: compareMode
-      });
-
-      return;
-    }
-
-    if (message.type === "GET_STATE") {
-      sendResponse({
-        enabled,
-        compare: compareMode
-      });
-    }
-  }
-);
-
-chrome.storage.onChanged.addListener(
-  (changes, area) => {
-    if (
-      area !== "local" ||
-      !changes.enhanceEnabled
-    ) {
-      return;
-    }
-
-    enabled = Boolean(
-      changes.enhanceEnabled.newValue
-    );
-
-    if (!enabled) {
-      compareMode = false;
-    }
-
-    updateMode();
-  }
-);
-
-document.addEventListener(
-  "yt-navigate-finish",
-  () => {
-    setTimeout(
-      findAndAttachVideo,
-      250
-    );
-  }
-);
-
-document.addEventListener(
-  "fullscreenchange",
-  () => {
-    setTimeout(
-      updateOverlayLayout,
-      100
-    );
-  }
-);
 
 window.addEventListener(
   "resize",
