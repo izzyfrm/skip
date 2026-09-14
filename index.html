@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="description"
+    content="Skip is a lightweight Chrome extension that enhances YouTube videos and lets you compare the difference instantly."
+  >
+
+  <title>Skip — Video Enhancement</title>
+
+  <link rel="icon" href="icons/icon128.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <nav>
+    <a href="#" class="brand">
+      <img src="icons/icon128.png" alt="Skip">
+      <span>Skip</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#preview">Preview</a>
+      <a href="#install">Install</a>
+
+      <a
+        class="github-link"
+        href="https://github.com/izzydizzyy/Skip"
+        target="_blank"
+      >
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <main>
+
+    <section class="hero">
+      <div class="hero-glow"></div>
+
+      <div class="hero-content">
+        <div class="badge">
+          Chrome Extension
+        </div>
+
+        <h1>
+          Your videos.<br>
+          <span>Just better.</span>
+        </h1>
+
+        <p>
+          Skip enhances YouTube videos with one click.
+          Cleaner visuals, smoother motion, and an instant
+          before-and-after comparison.
+        </p>
+
+        <div class="hero-buttons">
+          <a
+            href="https://github.com/izzydizzyy/Skip"
+            target="_blank"
+            class="button primary"
+          >
+            Get Skip
+          </a>
+
+          <a
+            href="#preview"
+            class="button secondary"
+          >
+            See the difference
+          </a>
+        </div>
+
+        <div class="hero-note">
+          Free · No accounts · No tracking
+        </div>
+      </div>
+
+      <div class="extension-card">
+        <div class="extension-top">
+          <div>
+            <strong>Enhance</strong>
+            <span>Video enhancement is on</span>
+          </div>
+
+          <div class="fake-toggle">
+            <div></div>
+          </div>
+        </div>
+
+        <div class="fake-button">
+          <div class="compare-box">
+            <div></div>
+          </div>
+
+          <div>
+            <strong>Before & After</strong>
+            <span>Compare original and enhanced video</span>
+          </div>
+
+          <span class="arrow">›</span>
+        </div>
+
+        <div class="fake-motion">
+          <div class="motion-row">
+            <div>
+              <strong>Motion Blur</strong>
+              <span>Smooth fast movement</span>
+            </div>
+
+            <div class="mini-toggle">
+              <div></div>
+            </div>
+          </div>
+
+          <div class="strength">
+            <div class="strength-label">
+              <span>Strength</span>
+              <span>3</span>
+            </div>
+
+            <div class="slider">
+              <div class="slider-fill"></div>
+              <div class="slider-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="section-heading">
+        <span>Features</span>
+        <h2>Everything you need. Nothing you don't.</h2>
+        <p>
+          Skip stays lightweight and keeps the controls simple.
+        </p>
+      </div>
+
+      <div class="feature-grid">
+
+        <article class="feature-card">
+          <div class="feature-icon">✦</div>
+          <h3>One-click enhance</h3>
+          <p>
+            Turn Skip on and your YouTube video is automatically enhanced.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">◐</div>
+          <h3>Before & After</h3>
+          <p>
+            Drag the comparison line across your video to see the difference instantly.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">≈</div>
+          <h3>Motion Blur</h3>
+          <p>
+            Add smoother motion with adjustable frame-blended motion blur.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">○</div>
+          <h3>Private by default</h3>
+          <p>
+            No accounts, tracking, ads, or personal data collection.
+          </p>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="preview" class="section preview-section">
+
+      <div class="section-heading">
+        <span>Preview</span>
+        <h2>See the difference.</h2>
+        <p>
+          Compare the original video with Skip's enhanced version.
+        </p>
+      </div>
+
+      <div class="preview-grid">
+
+        <div class="preview-card">
+          <div class="preview-top">
+            <span>Enhancement</span>
+            <span class="live">
+              <i></i>
+              Active
+            </span>
+          </div>
+
+          <img
+            src="screenshots/one-preview.png"
+            alt="Skip video enhancement preview"
+          >
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-top">
+            <span>Before & After</span>
+            <span class="live">
+              <i></i>
+              Live
+            </span>
+          </div>
+
+          <img
+            src="screenshots/two-preview.png"
+            alt="Skip before and after comparison"
+          >
+        </div>
+
+      </div>
+    </section>
+
+    <section id="install" class="section install-section">
+
+      <div class="install-card">
+        <div class="install-copy">
+          <span>Installation</span>
+
+          <h2>Try Skip right now.</h2>
+
+          <p>
+            Skip isn't on the Chrome Web Store yet,
+            but you can install it manually in less than a minute.
+          </p>
+        </div>
+
+        <div class="steps">
+
+          <div class="step">
+            <span>1</span>
+            <div>
+              <strong>Download Skip</strong>
+              <p>Download the repository from GitHub.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <span>2</span>
+            <div>
+              <strong>Open Chrome Extensions</strong>
+              <p>
+                Go to
+                <code>chrome://extensions</code>
+                and enable Developer mode.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <span>3</span>
+            <div>
+              <strong>Load Skip</strong>
+              <p>
+                Press Load unpacked and select the Skip folder.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <span>4</span>
+            <div>
+              <strong>Open YouTube</strong>
+              <p>
+                Start a video and turn Enhance on.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <a
+          href="https://github.com/izzydizzyy/Skip"
+          target="_blank"
+          class="button primary install-button"
+        >
+          View on GitHub
+        </a>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    <a href="#" class="footer-brand">
+      <img src="icons/icon128.png" alt="">
+      Skip
+    </a>
+
+    <p>
+      Built by
+      <a
+        href="https://github.com/izzydizzyy"
+        target="_blank"
+      >
+        Izzy
+      </a>
+    </p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
