@@ -1,19 +1,37 @@
 {
   "manifest_version": 3,
-  "name": "Enhance",
+  "name": "Skip",
   "version": "1.1.0",
-  "description": "Cleaner video playback with instant before and after comparison.",
+  "description": "Enhance video quality and compare the difference instantly with skip!",
+
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
+
   "host_permissions": [
     "https://www.youtube.com/*"
   ],
-  "action": {
-    "default_popup": "popup.html"
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
+
+  "action": {
+    "default_popup": "popup.html",
+
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
   "content_scripts": [
     {
       "matches": [
