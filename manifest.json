@@ -1,10 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Enhance",
-  "version": "1.0.0",
-  "description": "Automatically enhances YouTube videos with a simple before & after comparison.",
+  "version": "1.1.0",
+  "description": "Cleaner video playback with instant before and after comparison.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*"
   ],
   "action": {
     "default_popup": "popup.html"

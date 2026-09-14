@@ -1,512 +1,668 @@
-let enabled = false;
-let compareMode = false;
-
-let video = null;
-let parent = null;
-
-let overlay = null;
-let canvas = null;
-let context = null;
-let divider = null;
-
-let originalLabel = null;
-let enhancedLabel = null;
-
-let originalInlineFilter = "";
-
-let comparePosition = 50;
-let dragging = false;
-
-let frameToken = 0;
-let resizeObserver = null;
-
-function createFilter() {
-  if (document.getElementById("enhance-filter-svg")) {
+(() => {
+  if (window.__ENHANCE_LOADED__) {
     return;
   }
 
-  const wrapper = document.createElement("div");
+  window.__ENHANCE_LOADED__ = true;
 
-  wrapper.innerHTML = `
-    <svg
-      id="enhance-filter-svg"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <filter
-          id="enhance-video-filter"
-          x="-10%"
-          y="-10%"
-          width="120%"
-          height="120%"
-          color-interpolation-filters="sRGB"
-        >
-          <feColorMatrix
-            type="matrix"
-            values="
-              1.07 0    0    0 -0.015
-              0    1.06 0    0 -0.010
-              0    0    1.05 0 -0.005
-              0    0    0    1  0
-            "
-            result="color"
-          />
+  let enabled = false;
+  let compare = false;
 
-          <feConvolveMatrix
-            in="color"
-            order="3"
-            kernelMatrix="
-               0    -0.12  0
-              -0.12  1.48 -0.12
-               0    -0.12  0
-            "
-            divisor="1"
-            bias="0"
-            preserveAlpha="true"
-          />
-        </filter>
-      </defs>
-    </svg>
-  `;
+  let video = null;
 
-  const svg = wrapper.firstElementChild;
+  let overlay = null;
+  let canvas = null;
+  let context = null;
 
-  document.documentElement.appendChild(svg);
-}
+  let rightSide = null;
+  let rightInner = null;
 
-function getVideo() {
-  return document.querySelector("video.html5-main-video")
-    || document.querySelector("video");
-}
+  let divider = null;
 
-function attachVideo(nextVideo) {
-  if (!nextVideo || nextVideo === video) {
-    return;
-  }
+  let originalLabel = null;
+  let enhancedLabel = null;
 
-  cleanupVideo();
+  let position = 50;
 
-  video = nextVideo;
-  parent = video.parentElement;
+  let dragging = false;
 
-  if (!parent) {
-    return;
-  }
+  let animationFrame = null;
+  let videoFrame = null;
 
-  originalInlineFilter = video.style.filter || "";
-
-  const computedPosition = getComputedStyle(parent).position;
-
-  if (computedPosition === "static") {
-    parent.style.position = "relative";
-  }
-
-  createComparisonUI();
-
-  resizeObserver = new ResizeObserver(() => {
-    updateOverlayLayout();
-  });
-
-  resizeObserver.observe(video);
-
-  video.addEventListener(
-    "loadedmetadata",
-    updateOverlayLayout
-  );
-
-  video.addEventListener(
-    "emptied",
-    findAndAttachVideo
-  );
-
-  updateMode();
-}
-
-function cleanupVideo() {
-  frameToken++;
-
-  resizeObserver?.disconnect();
-  resizeObserver = null;
-
-  if (video) {
-    video.style.filter = originalInlineFilter;
-  }
-
-  overlay?.remove();
-
-  overlay = null;
-  canvas = null;
-  context = null;
-  divider = null;
-
-  originalLabel = null;
-  enhancedLabel = null;
-
-  video = null;
-  parent = null;
-}
-
-function createComparisonUI() {
-  overlay = document.createElement("div");
-  overlay.id = "enhance-comparison-layer";
-  overlay.classList.add("enhance-hidden");
-
-  canvas = document.createElement("canvas");
-  canvas.id = "enhance-comparison-canvas";
-
-  context = canvas.getContext("2d", {
-    alpha: false,
-    desynchronized: true
-  });
-
-  divider = document.createElement("div");
-  divider.id = "enhance-divider";
-
-  originalLabel = document.createElement("div");
-  originalLabel.id = "enhance-label-original";
-  originalLabel.className = "enhance-label";
-  originalLabel.textContent = "Original";
-
-  enhancedLabel = document.createElement("div");
-  enhancedLabel.id = "enhance-label-enhanced";
-  enhancedLabel.className = "enhance-label";
-  enhancedLabel.textContent = "Enhanced";
-
-  overlay.append(
-    canvas,
-    divider,
-    originalLabel,
-    enhancedLabel
-  );
-
-  parent.appendChild(overlay);
-
-  divider.addEventListener(
-    "pointerdown",
-    startDrag
-  );
-
-  window.addEventListener(
-    "pointermove",
-    drag
-  );
-
-  window.addEventListener(
-    "pointerup",
-    stopDrag
-  );
-
-  updateOverlayLayout();
-  updateComparisonPosition();
-}
-
-function updateOverlayLayout() {
-  if (!video || !parent || !overlay) {
-    return;
-  }
-
-  const videoRect =
-    video.getBoundingClientRect();
-
-  const parentRect =
-    parent.getBoundingClientRect();
-
-  if (
-    videoRect.width <= 0 ||
-    videoRect.height <= 0
-  ) {
-    return;
-  }
-
-  const left =
-    videoRect.left - parentRect.left;
-
-  const top =
-    videoRect.top - parentRect.top;
-
-  overlay.style.left = `${left}px`;
-  overlay.style.top = `${top}px`;
-
-  overlay.style.width =
-    `${videoRect.width}px`;
-
-  overlay.style.height =
-    `${videoRect.height}px`;
-
-  const scale = Math.min(
-    window.devicePixelRatio || 1,
-    1.25
-  );
-
-  const width = Math.floor(
-    videoRect.width * scale
-  );
-
-  const height = Math.floor(
-    videoRect.height * scale
-  );
-
-  if (
-    canvas.width !== width ||
-    canvas.height !== height
-  ) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-
-  updateComparisonPosition();
-}
-
-function startDrag(event) {
-  if (!compareMode) {
-    return;
-  }
-
-  dragging = true;
-
-  divider.setPointerCapture?.(
-    event.pointerId
-  );
-
-  setPositionFromPointer(event);
-}
-
-function drag(event) {
-  if (!dragging || !compareMode) {
-    return;
-  }
-
-  setPositionFromPointer(event);
-}
-
-function stopDrag() {
-  dragging = false;
-}
-
-function setPositionFromPointer(event) {
-  if (!overlay) {
-    return;
-  }
-
-  const rect = overlay.getBoundingClientRect();
-
-  let percent =
-    ((event.clientX - rect.left) / rect.width) * 100;
-
-  percent = Math.max(
-    4,
-    Math.min(96, percent)
-  );
-
-  comparePosition = percent;
-
-  updateComparisonPosition();
-}
-
-function updateComparisonPosition() {
-  if (!overlay || !canvas || !divider) {
-    return;
-  }
-
-  divider.style.left =
-    `${comparePosition}%`;
-
-  canvas.style.clipPath =
-    `inset(0 0 0 ${comparePosition}%)`;
-
-  const leftWidth = comparePosition;
-  const rightWidth = 100 - comparePosition;
-
-  originalLabel.style.opacity =
-    leftWidth < 16 ? "0" : "1";
-
-  enhancedLabel.style.opacity =
-    rightWidth < 16 ? "0" : "1";
-}
-
-function getEnhancedFilter() {
-  const base = originalInlineFilter.trim();
-
-  if (base) {
-    return `${base} url("#enhance-video-filter")`;
-  }
-
-  return 'url("#enhance-video-filter")';
-}
-
-function updateMode() {
-  if (!video) {
-    return;
-  }
-
-  frameToken++;
-
-  if (!enabled) {
-    compareMode = false;
-
-    video.style.filter =
-      originalInlineFilter;
-
-    overlay?.classList.add(
-      "enhance-hidden"
+  function getVideo() {
+    return (
+      document.querySelector(
+        "video.html5-main-video"
+      ) ||
+      document.querySelector("video")
     );
-
-    return;
   }
 
-  if (compareMode) {
-    video.style.filter =
-      originalInlineFilter;
-
-    overlay?.classList.remove(
-      "enhance-hidden"
-    );
-
-    updateOverlayLayout();
-    startComparisonRenderer();
-
-    return;
-  }
-
-  overlay?.classList.add(
-    "enhance-hidden"
-  );
-
-  video.style.filter =
-    getEnhancedFilter();
-}
-
-function startComparisonRenderer() {
-  const token = ++frameToken;
-
-  function render() {
+  function buildOverlay() {
     if (
-      token !== frameToken ||
-      !enabled ||
-      !compareMode ||
+      document.getElementById(
+        "enhance-comparison"
+      )
+    ) {
+      overlay =
+        document.getElementById(
+          "enhance-comparison"
+        );
+
+      return;
+    }
+
+    overlay =
+      document.createElement("div");
+
+    overlay.id =
+      "enhance-comparison";
+
+    canvas =
+      document.createElement("canvas");
+
+    canvas.id =
+      "enhance-canvas";
+
+    context = canvas.getContext(
+      "2d",
+      {
+        alpha: false,
+        desynchronized: true
+      }
+    );
+
+    rightSide =
+      document.createElement("div");
+
+    rightSide.id =
+      "enhance-right-side";
+
+    rightInner =
+      document.createElement("div");
+
+    rightInner.id =
+      "enhance-right-inner";
+
+    rightSide.appendChild(
+      rightInner
+    );
+
+    divider =
+      document.createElement("div");
+
+    divider.id =
+      "enhance-divider";
+
+    originalLabel =
+      document.createElement("div");
+
+    originalLabel.id =
+      "enhance-original-label";
+
+    originalLabel.className =
+      "enhance-label";
+
+    originalLabel.textContent =
+      "Original";
+
+    enhancedLabel =
+      document.createElement("div");
+
+    enhancedLabel.id =
+      "enhance-enhanced-label";
+
+    enhancedLabel.className =
+      "enhance-label";
+
+    enhancedLabel.textContent =
+      "Enhanced";
+
+    overlay.appendChild(canvas);
+
+    overlay.appendChild(
+      rightSide
+    );
+
+    overlay.appendChild(
+      divider
+    );
+
+    overlay.appendChild(
+      originalLabel
+    );
+
+    overlay.appendChild(
+      enhancedLabel
+    );
+
+    document.body.appendChild(
+      overlay
+    );
+
+    divider.addEventListener(
+      "pointerdown",
+      startDrag
+    );
+
+    window.addEventListener(
+      "pointermove",
+      moveDrag,
+      true
+    );
+
+    window.addEventListener(
+      "pointerup",
+      stopDrag,
+      true
+    );
+
+    updateSlider();
+  }
+
+  function attachVideo() {
+    const found = getVideo();
+
+    if (!found) {
+      return;
+    }
+
+    if (video === found) {
+      return;
+    }
+
+    if (video) {
+      video.classList.remove(
+        "enhance-active"
+      );
+    }
+
+    video = found;
+
+    updateState();
+    updateBounds();
+  }
+
+  function updateBounds() {
+    if (
       !video ||
-      !canvas ||
-      !context
+      !overlay
     ) {
       return;
     }
 
-    drawFrame();
+    const rect =
+      video.getBoundingClientRect();
 
     if (
-      typeof video.requestVideoFrameCallback ===
-      "function"
+      rect.width <= 0 ||
+      rect.height <= 0
     ) {
-      video.requestVideoFrameCallback(render);
-    } else {
-      requestAnimationFrame(render);
+      return;
+    }
+
+    overlay.style.left =
+      `${rect.left}px`;
+
+    overlay.style.top =
+      `${rect.top}px`;
+
+    overlay.style.width =
+      `${rect.width}px`;
+
+    overlay.style.height =
+      `${rect.height}px`;
+
+    const ratio = Math.min(
+      window.devicePixelRatio || 1,
+      1.25
+    );
+
+    const width = Math.floor(
+      rect.width * ratio
+    );
+
+    const height = Math.floor(
+      rect.height * ratio
+    );
+
+    if (
+      canvas.width !== width ||
+      canvas.height !== height
+    ) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    rightInner.style.width =
+      `${rect.width}px`;
+
+    updateSlider();
+  }
+
+  function updateSlider() {
+    if (
+      !overlay ||
+      !divider ||
+      !rightSide ||
+      !rightInner
+    ) {
+      return;
+    }
+
+    divider.style.left =
+      `${position}%`;
+
+    const right =
+      100 - position;
+
+    rightSide.style.left =
+      `${position}%`;
+
+    rightSide.style.width =
+      `${right}%`;
+
+    rightInner.style.right = "0";
+
+    canvas.style.clipPath =
+      `inset(0 0 0 ${position}%)`;
+
+    originalLabel.style.opacity =
+      position < 13
+        ? "0"
+        : "1";
+
+    enhancedLabel.style.opacity =
+      position > 87
+        ? "0"
+        : "1";
+  }
+
+  function pointerPercent(event) {
+    if (!overlay) {
+      return position;
+    }
+
+    const rect =
+      overlay.getBoundingClientRect();
+
+    const value =
+      ((event.clientX - rect.left) /
+        rect.width) *
+      100;
+
+    return Math.max(
+      3,
+      Math.min(97, value)
+    );
+  }
+
+  function startDrag(event) {
+    dragging = true;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    position =
+      pointerPercent(event);
+
+    updateSlider();
+
+    try {
+      divider.setPointerCapture(
+        event.pointerId
+      );
+    } catch {}
+  }
+
+  function moveDrag(event) {
+    if (!dragging) {
+      return;
+    }
+
+    position =
+      pointerPercent(event);
+
+    updateSlider();
+  }
+
+  function stopDrag() {
+    dragging = false;
+  }
+
+  function draw() {
+    if (
+      !video ||
+      !canvas ||
+      !context ||
+      !enabled ||
+      !compare
+    ) {
+      return;
+    }
+
+    if (
+      video.readyState >= 2
+    ) {
+      try {
+        context.drawImage(
+          video,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+      } catch {}
     }
   }
 
-  render();
-}
+  function stopRenderer() {
+    if (animationFrame) {
+      cancelAnimationFrame(
+        animationFrame
+      );
 
-function drawFrame() {
-  if (
-    !video ||
-    !canvas ||
-    !context ||
-    video.readyState < 2
-  ) {
-    return;
+      animationFrame = null;
+    }
+
+    videoFrame = null;
   }
 
-  try {
-    context.drawImage(
-      video,
-      0,
-      0,
-      canvas.width,
-      canvas.height
+  function startRenderer() {
+    stopRenderer();
+
+    if (!video) {
+      return;
+    }
+
+    const renderRAF = () => {
+      if (
+        !enabled ||
+        !compare
+      ) {
+        return;
+      }
+
+      draw();
+      updateBounds();
+
+      animationFrame =
+        requestAnimationFrame(
+          renderRAF
+        );
+    };
+
+    animationFrame =
+      requestAnimationFrame(
+        renderRAF
+      );
+  }
+
+  function updateState() {
+    buildOverlay();
+    attachVideo();
+
+    if (!video) {
+      return;
+    }
+
+    if (!enabled) {
+      compare = false;
+
+      video.classList.remove(
+        "enhance-active"
+      );
+
+      overlay.classList.remove(
+        "enhance-visible"
+      );
+
+      stopRenderer();
+
+      return;
+    }
+
+    if (compare) {
+      video.classList.remove(
+        "enhance-active"
+      );
+
+      overlay.classList.add(
+        "enhance-visible"
+      );
+
+      updateBounds();
+      updateSlider();
+
+      startRenderer();
+
+      return;
+    }
+
+    overlay.classList.remove(
+      "enhance-visible"
     );
-  } catch {}
-}
 
-function attachVideo(nextVideo) {
-  if (!nextVideo || nextVideo === video) {
-    return;
+    video.classList.add(
+      "enhance-active"
+    );
+
+    stopRenderer();
   }
 
-  cleanupVideo();
+  chrome.runtime.onMessage.addListener(
+    (
+      message,
+      sender,
+      sendResponse
+    ) => {
+      if (
+        message.type === "PING"
+      ) {
+        sendResponse({
+          ok: true
+        });
 
-  video = nextVideo;
+        return;
+      }
 
-  parent =
-    document.querySelector(".html5-video-player") ||
-    video.closest(".html5-video-container") ||
-    video.parentElement;
+      if (
+        message.type ===
+        "GET_STATE"
+      ) {
+        sendResponse({
+          enabled,
+          compare
+        });
 
-  if (!parent) {
-    return;
-  }
+        return;
+      }
 
-  originalInlineFilter =
-    video.style.filter || "";
+      if (
+        message.type ===
+        "SET_ENABLED"
+      ) {
+        enabled =
+          Boolean(
+            message.enabled
+          );
 
-  const computedPosition =
-    getComputedStyle(parent).position;
+        if (!enabled) {
+          compare = false;
+        }
 
-  if (computedPosition === "static") {
-    parent.style.position = "relative";
-  }
+        chrome.storage.local.set({
+          enhanceEnabled:
+            enabled,
 
-  createComparisonUI();
+          compareEnabled:
+            compare
+        });
 
-  resizeObserver = new ResizeObserver(() => {
-    updateOverlayLayout();
-  });
+        updateState();
 
-  resizeObserver.observe(video);
+        sendResponse({
+          enabled,
+          compare
+        });
 
-  video.addEventListener(
-    "loadedmetadata",
-    updateOverlayLayout
+        return;
+      }
+
+      if (
+        message.type ===
+        "TOGGLE_COMPARE"
+      ) {
+        if (!enabled) {
+          sendResponse({
+            enabled,
+            compare: false
+          });
+
+          return;
+        }
+
+        compare = !compare;
+
+        chrome.storage.local.set({
+          compareEnabled:
+            compare
+        });
+
+        updateState();
+
+        sendResponse({
+          enabled,
+          compare
+        });
+      }
+    }
   );
 
-  updateMode();
+  chrome.storage.onChanged.addListener(
+    (changes, area) => {
+      if (
+        area !== "local"
+      ) {
+        return;
+      }
 
-  setTimeout(() => {
-    updateOverlayLayout();
-  }, 100);
+      if (
+        changes.enhanceEnabled
+      ) {
+        enabled =
+          Boolean(
+            changes
+              .enhanceEnabled
+              .newValue
+          );
+      }
 
-  setTimeout(() => {
-    updateOverlayLayout();
-  }, 500);
-}
+      if (
+        changes.compareEnabled
+      ) {
+        compare =
+          Boolean(
+            changes
+              .compareEnabled
+              .newValue
+          );
+      }
 
-window.addEventListener(
-  "resize",
-  updateOverlayLayout
-);
+      if (!enabled) {
+        compare = false;
+      }
 
-const observer = new MutationObserver(() => {
-  findAndAttachVideo();
-});
+      updateState();
+    }
+  );
 
-observer.observe(
-  document.documentElement,
-  {
-    childList: true,
-    subtree: true
-  }
-);
+  window.addEventListener(
+    "resize",
+    updateBounds
+  );
 
-createFilter();
+  window.addEventListener(
+    "scroll",
+    updateBounds,
+    true
+  );
 
-chrome.storage.local.get(
-  {
-    enhanceEnabled: false
-  },
-  result => {
-    enabled = Boolean(
-      result.enhanceEnabled
-    );
+  document.addEventListener(
+    "fullscreenchange",
+    () => {
+      setTimeout(
+        updateBounds,
+        100
+      );
 
-    findAndAttachVideo();
-  }
-);
+      setTimeout(
+        updateBounds,
+        500
+      );
+    }
+  );
+
+  document.addEventListener(
+    "yt-navigate-finish",
+    () => {
+      setTimeout(
+        () => {
+          attachVideo();
+          updateState();
+        },
+        300
+      );
+    }
+  );
+
+  const observer =
+    new MutationObserver(() => {
+      attachVideo();
+    });
+
+  observer.observe(
+    document.documentElement,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+  chrome.storage.local.get(
+    {
+      enhanceEnabled: false,
+      compareEnabled: false
+    },
+    result => {
+      enabled =
+        Boolean(
+          result.enhanceEnabled
+        );
+
+      compare =
+        Boolean(
+          result.compareEnabled
+        );
+
+      if (!enabled) {
+        compare = false;
+      }
+
+      buildOverlay();
+      attachVideo();
+      updateState();
+
+      setInterval(
+        () => {
+          attachVideo();
+
+          if (compare) {
+            updateBounds();
+          }
+        },
+        1000
+      );
+    }
+  );
+})();
