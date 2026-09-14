@@ -17,7 +17,7 @@
 
       <label class="switch">
         <input id="enhanceToggle" type="checkbox">
-        <span class="slider"></span>
+        <span class="switch-ui"></span>
       </label>
     </div>
 
@@ -33,6 +33,41 @@
 
       <span class="arrow">›</span>
     </button>
+
+    <div class="motion-card">
+      <div class="motion-top">
+        <div>
+          <strong>Motion Blur</strong>
+          <small>Smooth fast movement using frame blending</small>
+        </div>
+
+        <label class="switch small">
+          <input id="motionToggle" type="checkbox">
+          <span class="switch-ui"></span>
+        </label>
+      </div>
+
+      <div id="strengthArea" class="strength-area">
+        <div class="strength-header">
+          <span>Strength</span>
+          <span id="strengthValue">3</span>
+        </div>
+
+        <input
+          id="strengthSlider"
+          type="range"
+          min="1"
+          max="10"
+          step="1"
+          value="3"
+        >
+
+        <div class="range-labels">
+          <span>Subtle</span>
+          <span>Heavy</span>
+        </div>
+      </div>
+    </div>
 
     <div class="footer">
       <span class="dot"></span>

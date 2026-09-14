@@ -1,34 +1,57 @@
-const toggle = document.getElementById("enhanceToggle");
-const compareButton = document.getElementById("compareButton");
-const statusText = document.getElementById("statusText");
-const compareTitle = compareButton.querySelector("strong");
+const enhanceToggle =
+  document.getElementById("enhanceToggle");
+
+const motionToggle =
+  document.getElementById("motionToggle");
+
+const strengthSlider =
+  document.getElementById("strengthSlider");
+
+const strengthValue =
+  document.getElementById("strengthValue");
+
+const strengthArea =
+  document.getElementById("strengthArea");
+
+const compareButton =
+  document.getElementById("compareButton");
+
+const compareTitle =
+  compareButton.querySelector("strong");
+
+const statusText =
+  document.getElementById("statusText");
 
 let compareActive = false;
 
-async function getCurrentTab() {
-  const tabs = await chrome.tabs.query({
+async function getTab() {
+  const [tab] = await chrome.tabs.query({
     active: true,
     currentWindow: true
   });
 
-  return tabs[0];
+  return tab;
 }
 
-async function ensureContentScript() {
-  const tab = await getCurrentTab();
+async function ensureScript() {
+  const tab = await getTab();
 
-  if (!tab?.id) {
-    return null;
-  }
-
-  if (!tab.url?.includes("youtube.com")) {
-    return null;
+  if (
+    !tab?.id ||
+    !tab.url?.includes("youtube.com")
+  ) {
+    return false;
   }
 
   try {
-    return await chrome.tabs.sendMessage(tab.id, {
-      type: "PING"
-    });
+    await chrome.tabs.sendMessage(
+      tab.id,
+      {
+        type: "PING"
+      }
+    );
+
+    return true;
   } catch {}
 
   try {
@@ -51,46 +74,62 @@ async function ensureContentScript() {
     });
 
     await new Promise(resolve => {
-      setTimeout(resolve, 150);
+      setTimeout(resolve, 120);
     });
 
-    return await chrome.tabs.sendMessage(tab.id, {
-      type: "PING"
-    });
-  } catch (error) {
-    console.error("Enhance injection failed:", error);
-    return null;
+    return true;
+  } catch {
+    return false;
   }
 }
 
 async function send(message) {
-  const tab = await getCurrentTab();
+  const tab = await getTab();
 
   if (!tab?.id) {
     return null;
   }
 
-  await ensureContentScript();
+  await ensureScript();
 
   try {
     return await chrome.tabs.sendMessage(
       tab.id,
       message
     );
-  } catch (error) {
-    console.error("Enhance message failed:", error);
+  } catch {
     return null;
   }
 }
 
-function updateUI(enabled) {
-  toggle.checked = enabled;
+function updateMotionUI() {
+  const available =
+    enhanceToggle.checked;
 
-  statusText.textContent = enabled
-    ? "Video enhancement is on"
-    : "Video enhancement is off";
+  motionToggle.disabled =
+    !available;
 
-  compareButton.disabled = !enabled;
+  const sliderAvailable =
+    available &&
+    motionToggle.checked;
+
+  strengthArea.classList.toggle(
+    "disabled",
+    !sliderAvailable
+  );
+}
+
+function updateEnhanceUI() {
+  const enabled =
+    enhanceToggle.checked;
+
+  compareButton.disabled =
+    !enabled;
+
+  statusText.textContent =
+    enabled
+      ? "Video enhancement is on"
+      : "Video enhancement is off";
 
   if (!enabled) {
     compareActive = false;
@@ -102,27 +141,33 @@ function updateUI(enabled) {
     compareTitle.textContent =
       "Before & After";
   }
+
+  updateMotionUI();
 }
 
 async function load() {
-  const saved = await chrome.storage.local.get({
-    enhanceEnabled: false,
-    compareEnabled: false
-  });
+  const settings =
+    await chrome.storage.local.get({
+      enhanceEnabled: false,
+      compareEnabled: false,
+      motionBlurEnabled: false,
+      motionBlurStrength: 3
+    });
 
-  updateUI(saved.enhanceEnabled);
+  enhanceToggle.checked =
+    settings.enhanceEnabled;
 
-  await ensureContentScript();
+  motionToggle.checked =
+    settings.motionBlurEnabled;
 
-  const state = await send({
-    type: "GET_STATE"
-  });
+  strengthSlider.value =
+    settings.motionBlurStrength;
 
-  if (!state) {
-    return;
-  }
+  strengthValue.textContent =
+    settings.motionBlurStrength;
 
-  compareActive = Boolean(state.compare);
+  compareActive =
+    settings.compareEnabled;
 
   compareButton.classList.toggle(
     "active",
@@ -133,42 +178,97 @@ async function load() {
     compareActive
       ? "Exit comparison"
       : "Before & After";
+
+  updateEnhanceUI();
+
+  await ensureScript();
 }
 
-toggle.addEventListener("change", async () => {
-  const enabled = toggle.checked;
+enhanceToggle.addEventListener(
+  "change",
+  async () => {
+    const enabled =
+      enhanceToggle.checked;
 
-  if (!enabled) {
-    compareActive = false;
+    if (!enabled) {
+      compareActive = false;
 
-    await chrome.storage.local.set({
-      enhanceEnabled: false,
-      compareEnabled: false
-    });
-  } else {
-    await chrome.storage.local.set({
-      enhanceEnabled: true
+      await chrome.storage.local.set({
+        enhanceEnabled: false,
+        compareEnabled: false
+      });
+    } else {
+      await chrome.storage.local.set({
+        enhanceEnabled: true
+      });
+    }
+
+    updateEnhanceUI();
+
+    await send({
+      type: "SET_ENABLED",
+      enabled
     });
   }
+);
 
-  updateUI(enabled);
+motionToggle.addEventListener(
+  "change",
+  async () => {
+    const motionBlurEnabled =
+      motionToggle.checked;
 
-  await send({
-    type: "SET_ENABLED",
-    enabled
-  });
-});
+    await chrome.storage.local.set({
+      motionBlurEnabled
+    });
+
+    updateMotionUI();
+
+    await send({
+      type: "SET_MOTION_BLUR",
+      enabled: motionBlurEnabled
+    });
+  }
+);
+
+strengthSlider.addEventListener(
+  "input",
+  async () => {
+    const strength =
+      Number(
+        strengthSlider.value
+      );
+
+    strengthValue.textContent =
+      strength;
+
+    await chrome.storage.local.set({
+      motionBlurStrength:
+        strength
+    });
+
+    await send({
+      type:
+        "SET_MOTION_STRENGTH",
+
+      strength
+    });
+  }
+);
 
 compareButton.addEventListener(
   "click",
   async () => {
-    if (!toggle.checked) {
+    if (
+      !enhanceToggle.checked
+    ) {
       return;
     }
 
-    const response = await send({
-      type: "TOGGLE_COMPARE"
-    });
+    const response =
+      await send({
+        type: "TOGGLE_COMPARE"
+      });
 
     if (!response) {
       statusText.textContent =
@@ -179,10 +279,6 @@ compareButton.addEventListener(
 
     compareActive =
       Boolean(response.compare);
-
-    await chrome.storage.local.set({
-      compareEnabled: compareActive
-    });
 
     compareButton.classList.toggle(
       "active",

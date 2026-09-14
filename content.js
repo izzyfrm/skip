@@ -1,35 +1,41 @@
 (() => {
-  if (window.__ENHANCE_LOADED__) {
+  if (window.__ENHANCE_V2__) {
     return;
   }
 
-  window.__ENHANCE_LOADED__ = true;
+  window.__ENHANCE_V2__ = true;
 
   let enabled = false;
   let compare = false;
 
+  let motionBlurEnabled = false;
+  let motionBlurStrength = 3;
+
   let video = null;
+  let videoContainer = null;
 
-  let overlay = null;
-  let canvas = null;
-  let context = null;
-
-  let rightSide = null;
-  let rightInner = null;
-
+  let compareOverlay = null;
+  let compareCanvas = null;
+  let compareContext = null;
   let divider = null;
 
   let originalLabel = null;
   let enhancedLabel = null;
 
-  let position = 50;
+  let motionLayer = null;
+  let motionCanvas = null;
+  let motionContext = null;
 
+  let sliderPosition = 50;
   let dragging = false;
 
-  let animationFrame = null;
-  let videoFrame = null;
+  let renderGeneration = 0;
 
-  function getVideo() {
+  let history = [];
+  let historyIndex = 0;
+  let historyLength = 0;
+
+  function findVideo() {
     return (
       document.querySelector(
         "video.html5-main-video"
@@ -38,55 +44,90 @@
     );
   }
 
-  function buildOverlay() {
-    if (
+  function resetHistory() {
+    history = [];
+    historyIndex = 0;
+    historyLength = 0;
+  }
+
+  function frameCount() {
+    if (!motionBlurEnabled) {
+      return 1;
+    }
+
+    return Math.max(
+      2,
+      Math.min(
+        7,
+        Math.round(
+          1 +
+          motionBlurStrength * 0.6
+        )
+      )
+    );
+  }
+
+  function buildCompareOverlay() {
+    compareOverlay =
       document.getElementById(
         "enhance-comparison"
-      )
-    ) {
-      overlay =
+      );
+
+    if (compareOverlay) {
+      compareCanvas =
         document.getElementById(
-          "enhance-comparison"
+          "enhance-comparison-canvas"
+        );
+
+      compareContext =
+        compareCanvas.getContext(
+          "2d",
+          {
+            alpha: false,
+            desynchronized: true
+          }
+        );
+
+      divider =
+        document.getElementById(
+          "enhance-divider"
+        );
+
+      originalLabel =
+        document.getElementById(
+          "enhance-original-label"
+        );
+
+      enhancedLabel =
+        document.getElementById(
+          "enhance-enhanced-label"
         );
 
       return;
     }
 
-    overlay =
+    compareOverlay =
       document.createElement("div");
 
-    overlay.id =
+    compareOverlay.id =
       "enhance-comparison";
 
-    canvas =
-      document.createElement("canvas");
+    compareCanvas =
+      document.createElement(
+        "canvas"
+      );
 
-    canvas.id =
-      "enhance-canvas";
+    compareCanvas.id =
+      "enhance-comparison-canvas";
 
-    context = canvas.getContext(
-      "2d",
-      {
-        alpha: false,
-        desynchronized: true
-      }
-    );
-
-    rightSide =
-      document.createElement("div");
-
-    rightSide.id =
-      "enhance-right-side";
-
-    rightInner =
-      document.createElement("div");
-
-    rightInner.id =
-      "enhance-right-inner";
-
-    rightSide.appendChild(
-      rightInner
-    );
+    compareContext =
+      compareCanvas.getContext(
+        "2d",
+        {
+          alpha: false,
+          desynchronized: true
+        }
+      );
 
     divider =
       document.createElement("div");
@@ -118,26 +159,15 @@
     enhancedLabel.textContent =
       "Enhanced";
 
-    overlay.appendChild(canvas);
-
-    overlay.appendChild(
-      rightSide
-    );
-
-    overlay.appendChild(
-      divider
-    );
-
-    overlay.appendChild(
-      originalLabel
-    );
-
-    overlay.appendChild(
+    compareOverlay.append(
+      compareCanvas,
+      divider,
+      originalLabel,
       enhancedLabel
     );
 
     document.body.appendChild(
-      overlay
+      compareOverlay
     );
 
     divider.addEventListener(
@@ -156,18 +186,84 @@
       stopDrag,
       true
     );
+  }
 
-    updateSlider();
+  function buildMotionLayer() {
+    if (
+      !video ||
+      !video.parentElement
+    ) {
+      return;
+    }
+
+    const newContainer =
+      video.parentElement;
+
+    if (
+      motionLayer &&
+      videoContainer === newContainer
+    ) {
+      return;
+    }
+
+    motionLayer?.remove();
+
+    videoContainer =
+      newContainer;
+
+    const style =
+      getComputedStyle(
+        videoContainer
+      );
+
+    if (
+      style.position === "static"
+    ) {
+      videoContainer.style.position =
+        "relative";
+    }
+
+    motionLayer =
+      document.createElement("div");
+
+    motionLayer.id =
+      "enhance-motion-layer";
+
+    motionCanvas =
+      document.createElement(
+        "canvas"
+      );
+
+    motionCanvas.id =
+      "enhance-motion-canvas";
+
+    motionContext =
+      motionCanvas.getContext(
+        "2d",
+        {
+          alpha: false,
+          desynchronized: true
+        }
+      );
+
+    motionLayer.appendChild(
+      motionCanvas
+    );
+
+    videoContainer.appendChild(
+      motionLayer
+    );
   }
 
   function attachVideo() {
-    const found = getVideo();
+    const found =
+      findVideo();
 
     if (!found) {
       return;
     }
 
-    if (video === found) {
+    if (found === video) {
       return;
     }
 
@@ -179,16 +275,26 @@
 
     video = found;
 
+    buildMotionLayer();
+
+    video.addEventListener(
+      "seeking",
+      resetHistory
+    );
+
+    video.addEventListener(
+      "emptied",
+      resetHistory
+    );
+
+    resetHistory();
+
     updateState();
-    updateBounds();
   }
 
-  function updateBounds() {
-    if (
-      !video ||
-      !overlay
-    ) {
-      return;
+  function getVideoRect() {
+    if (!video) {
+      return null;
     }
 
     const rect =
@@ -198,115 +304,181 @@
       rect.width <= 0 ||
       rect.height <= 0
     ) {
-      return;
+      return null;
     }
 
-    overlay.style.left =
-      `${rect.left}px`;
+    return rect;
+  }
 
-    overlay.style.top =
-      `${rect.top}px`;
-
-    overlay.style.width =
-      `${rect.width}px`;
-
-    overlay.style.height =
-      `${rect.height}px`;
-
+  function resizeCanvas(
+    canvas,
+    width,
+    height
+  ) {
     const ratio = Math.min(
       window.devicePixelRatio || 1,
       1.25
     );
 
-    const width = Math.floor(
-      rect.width * ratio
-    );
+    const targetWidth =
+      Math.max(
+        1,
+        Math.floor(
+          width * ratio
+        )
+      );
 
-    const height = Math.floor(
-      rect.height * ratio
-    );
+    const targetHeight =
+      Math.max(
+        1,
+        Math.floor(
+          height * ratio
+        )
+      );
 
     if (
-      canvas.width !== width ||
-      canvas.height !== height
+      canvas.width !== targetWidth ||
+      canvas.height !== targetHeight
     ) {
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width =
+        targetWidth;
+
+      canvas.height =
+        targetHeight;
+
+      resetHistory();
+    }
+  }
+
+  function updateCompareBounds() {
+    if (
+      !video ||
+      !compareOverlay
+    ) {
+      return;
     }
 
-    rightInner.style.width =
+    const rect =
+      getVideoRect();
+
+    if (!rect) {
+      return;
+    }
+
+    compareOverlay.style.left =
+      `${rect.left}px`;
+
+    compareOverlay.style.top =
+      `${rect.top}px`;
+
+    compareOverlay.style.width =
       `${rect.width}px`;
+
+    compareOverlay.style.height =
+      `${rect.height}px`;
+
+    resizeCanvas(
+      compareCanvas,
+      rect.width,
+      rect.height
+    );
 
     updateSlider();
   }
 
+  function updateMotionBounds() {
+    if (
+      !video ||
+      !videoContainer ||
+      !motionLayer
+    ) {
+      return;
+    }
+
+    const videoRect =
+      getVideoRect();
+
+    if (!videoRect) {
+      return;
+    }
+
+    const containerRect =
+      videoContainer.getBoundingClientRect();
+
+    motionLayer.style.left =
+      `${videoRect.left - containerRect.left}px`;
+
+    motionLayer.style.top =
+      `${videoRect.top - containerRect.top}px`;
+
+    motionLayer.style.width =
+      `${videoRect.width}px`;
+
+    motionLayer.style.height =
+      `${videoRect.height}px`;
+
+    resizeCanvas(
+      motionCanvas,
+      videoRect.width,
+      videoRect.height
+    );
+  }
+
   function updateSlider() {
     if (
-      !overlay ||
-      !divider ||
-      !rightSide ||
-      !rightInner
+      !compareCanvas ||
+      !divider
     ) {
       return;
     }
 
     divider.style.left =
-      `${position}%`;
+      `${sliderPosition}%`;
 
-    const right =
-      100 - position;
-
-    rightSide.style.left =
-      `${position}%`;
-
-    rightSide.style.width =
-      `${right}%`;
-
-    rightInner.style.right = "0";
-
-    canvas.style.clipPath =
-      `inset(0 0 0 ${position}%)`;
+    compareCanvas.style.clipPath =
+      `inset(0 0 0 ${sliderPosition}%)`;
 
     originalLabel.style.opacity =
-      position < 13
+      sliderPosition < 13
         ? "0"
         : "1";
 
     enhancedLabel.style.opacity =
-      position > 87
+      sliderPosition > 87
         ? "0"
         : "1";
   }
 
   function pointerPercent(event) {
-    if (!overlay) {
-      return position;
-    }
-
     const rect =
-      overlay.getBoundingClientRect();
-
-    const value =
-      ((event.clientX - rect.left) /
-        rect.width) *
-      100;
+      compareOverlay.getBoundingClientRect();
 
     return Math.max(
       3,
-      Math.min(97, value)
+      Math.min(
+        97,
+        (
+          (
+            event.clientX -
+            rect.left
+          ) /
+          rect.width
+        ) *
+        100
+      )
     );
   }
 
   function startDrag(event) {
     dragging = true;
 
-    event.preventDefault();
-    event.stopPropagation();
-
-    position =
+    sliderPosition =
       pointerPercent(event);
 
     updateSlider();
+
+    event.preventDefault();
+    event.stopPropagation();
 
     try {
       divider.setPointerCapture(
@@ -320,7 +492,7 @@
       return;
     }
 
-    position =
+    sliderPosition =
       pointerPercent(event);
 
     updateSlider();
@@ -330,21 +502,141 @@
     dragging = false;
   }
 
-  function draw() {
+  function ensureHistoryCanvas(
+    index,
+    width,
+    height
+  ) {
+    if (!history[index]) {
+      const canvas =
+        document.createElement(
+          "canvas"
+        );
+
+      history[index] = {
+        canvas,
+        context:
+          canvas.getContext(
+            "2d",
+            {
+              alpha: false
+            }
+          )
+      };
+    }
+
+    const item =
+      history[index];
+
     if (
-      !video ||
-      !canvas ||
-      !context ||
-      !enabled ||
-      !compare
+      item.canvas.width !== width ||
+      item.canvas.height !== height
     ) {
-      return;
+      item.canvas.width = width;
+      item.canvas.height = height;
+    }
+
+    return item;
+  }
+
+  function captureFrame(
+    width,
+    height
+  ) {
+    const count =
+      frameCount();
+
+    while (
+      history.length > count
+    ) {
+      history.pop();
     }
 
     if (
-      video.readyState >= 2
+      historyIndex >= count
     ) {
+      historyIndex = 0;
+    }
+
+    const item =
+      ensureHistoryCanvas(
+        historyIndex,
+        width,
+        height
+      );
+
+    try {
+      item.context.drawImage(
+        video,
+        0,
+        0,
+        width,
+        height
+      );
+    } catch {
+      return;
+    }
+
+    historyIndex =
+      (historyIndex + 1) %
+      count;
+
+    historyLength =
+      Math.min(
+        historyLength + 1,
+        count
+      );
+  }
+
+  function orderedFrames() {
+    if (
+      historyLength === 0
+    ) {
+      return [];
+    }
+
+    const count =
+      frameCount();
+
+    const output = [];
+
+    const start =
+      historyLength < count
+        ? 0
+        : historyIndex;
+
+    for (
+      let i = 0;
+      i < historyLength;
+      i++
+    ) {
+      const index =
+        (
+          start + i
+        ) %
+        count;
+
+      if (history[index]) {
+        output.push(
+          history[index].canvas
+        );
+      }
+    }
+
+    return output;
+  }
+
+  function composeFrames(
+    context,
+    canvas
+  ) {
+    const frames =
+      orderedFrames();
+
+    if (!frames.length) {
       try {
+        context.globalAlpha = 1;
+
         context.drawImage(
           video,
           0,
@@ -353,101 +645,227 @@
           canvas.height
         );
       } catch {}
-    }
-  }
 
-  function stopRenderer() {
-    if (animationFrame) {
-      cancelAnimationFrame(
-        animationFrame
-      );
-
-      animationFrame = null;
-    }
-
-    videoFrame = null;
-  }
-
-  function startRenderer() {
-    stopRenderer();
-
-    if (!video) {
       return;
     }
 
-    const renderRAF = () => {
+    context.globalAlpha = 1;
+
+    context.drawImage(
+      frames[0],
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    if (
+      !motionBlurEnabled
+    ) {
+      return;
+    }
+
+    const blend =
+      Math.max(
+        0.33,
+        0.54 -
+        motionBlurStrength *
+        0.018
+      );
+
+    for (
+      let i = 1;
+      i < frames.length;
+      i++
+    ) {
+      context.globalAlpha =
+        blend;
+
+      context.drawImage(
+        frames[i],
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+    }
+
+    context.globalAlpha = 1;
+  }
+
+  function renderFrame() {
+    if (
+      !video ||
+      video.readyState < 2
+    ) {
+      return;
+    }
+
+    let targetCanvas = null;
+    let targetContext = null;
+
+    if (compare) {
+      targetCanvas =
+        compareCanvas;
+
+      targetContext =
+        compareContext;
+    } else if (
+      enabled &&
+      motionBlurEnabled
+    ) {
+      targetCanvas =
+        motionCanvas;
+
+      targetContext =
+        motionContext;
+    }
+
+    if (
+      !targetCanvas ||
+      !targetContext
+    ) {
+      return;
+    }
+
+    captureFrame(
+      targetCanvas.width,
+      targetCanvas.height
+    );
+
+    composeFrames(
+      targetContext,
+      targetCanvas
+    );
+  }
+
+  function startRenderer() {
+    const generation =
+      ++renderGeneration;
+
+    function frame() {
       if (
-        !enabled ||
-        !compare
+        generation !==
+        renderGeneration
       ) {
         return;
       }
 
-      draw();
-      updateBounds();
+      if (
+        !enabled ||
+        (
+          !compare &&
+          !motionBlurEnabled
+        )
+      ) {
+        return;
+      }
 
-      animationFrame =
-        requestAnimationFrame(
-          renderRAF
+      if (compare) {
+        updateCompareBounds();
+      } else {
+        updateMotionBounds();
+      }
+
+      renderFrame();
+
+      if (
+        typeof
+          video
+            ?.requestVideoFrameCallback ===
+        "function"
+      ) {
+        video.requestVideoFrameCallback(
+          frame
         );
-    };
+      } else {
+        requestAnimationFrame(
+          frame
+        );
+      }
+    }
 
-    animationFrame =
-      requestAnimationFrame(
-        renderRAF
-      );
+    renderFrame();
+    frame();
+  }
+
+  function stopRenderer() {
+    renderGeneration++;
   }
 
   function updateState() {
-    buildOverlay();
-    attachVideo();
+    buildCompareOverlay();
+
+    if (!video) {
+      attachVideo();
+    }
 
     if (!video) {
       return;
     }
 
+    buildMotionLayer();
+
+    stopRenderer();
+
+    video.classList.remove(
+      "enhance-active"
+    );
+
+    compareOverlay.classList.remove(
+      "enhance-visible"
+    );
+
+    motionLayer.classList.remove(
+      "enhance-visible"
+    );
+
     if (!enabled) {
       compare = false;
 
-      video.classList.remove(
-        "enhance-active"
-      );
-
-      overlay.classList.remove(
-        "enhance-visible"
-      );
-
-      stopRenderer();
+      resetHistory();
 
       return;
     }
 
     if (compare) {
-      video.classList.remove(
-        "enhance-active"
-      );
-
-      overlay.classList.add(
+      compareOverlay.classList.add(
         "enhance-visible"
       );
 
-      updateBounds();
-      updateSlider();
+      enhancedLabel.textContent =
+        motionBlurEnabled
+          ? "Enhanced + Motion"
+          : "Enhanced";
+
+      updateCompareBounds();
+
+      resetHistory();
 
       startRenderer();
 
       return;
     }
 
-    overlay.classList.remove(
-      "enhance-visible"
-    );
+    if (motionBlurEnabled) {
+      motionLayer.classList.add(
+        "enhance-visible"
+      );
+
+      updateMotionBounds();
+
+      resetHistory();
+
+      startRenderer();
+
+      return;
+    }
 
     video.classList.add(
       "enhance-active"
     );
 
-    stopRenderer();
+    resetHistory();
   }
 
   chrome.runtime.onMessage.addListener(
@@ -467,12 +885,13 @@
       }
 
       if (
-        message.type ===
-        "GET_STATE"
+        message.type === "GET_STATE"
       ) {
         sendResponse({
           enabled,
-          compare
+          compare,
+          motionBlurEnabled,
+          motionBlurStrength
         });
 
         return;
@@ -515,14 +934,14 @@
       ) {
         if (!enabled) {
           sendResponse({
-            enabled,
             compare: false
           });
 
           return;
         }
 
-        compare = !compare;
+        compare =
+          !compare;
 
         chrome.storage.local.set({
           compareEnabled:
@@ -532,20 +951,70 @@
         updateState();
 
         sendResponse({
-          enabled,
           compare
+        });
+
+        return;
+      }
+
+      if (
+        message.type ===
+        "SET_MOTION_BLUR"
+      ) {
+        motionBlurEnabled =
+          Boolean(
+            message.enabled
+          );
+
+        resetHistory();
+
+        updateState();
+
+        sendResponse({
+          motionBlurEnabled
+        });
+
+        return;
+      }
+
+      if (
+        message.type ===
+        "SET_MOTION_STRENGTH"
+      ) {
+        motionBlurStrength =
+          Math.max(
+            1,
+            Math.min(
+              10,
+              Number(
+                message.strength
+              ) || 3
+            )
+          );
+
+        resetHistory();
+
+        updateState();
+
+        sendResponse({
+          motionBlurStrength
         });
       }
     }
   );
 
   chrome.storage.onChanged.addListener(
-    (changes, area) => {
+    (
+      changes,
+      area
+    ) => {
       if (
         area !== "local"
       ) {
         return;
       }
+
+      let changed = false;
 
       if (
         changes.enhanceEnabled
@@ -556,6 +1025,8 @@
               .enhanceEnabled
               .newValue
           );
+
+        changed = true;
       }
 
       if (
@@ -567,24 +1038,62 @@
               .compareEnabled
               .newValue
           );
+
+        changed = true;
+      }
+
+      if (
+        changes.motionBlurEnabled
+      ) {
+        motionBlurEnabled =
+          Boolean(
+            changes
+              .motionBlurEnabled
+              .newValue
+          );
+
+        changed = true;
+      }
+
+      if (
+        changes.motionBlurStrength
+      ) {
+        motionBlurStrength =
+          Number(
+            changes
+              .motionBlurStrength
+              .newValue
+          ) || 3;
+
+        changed = true;
       }
 
       if (!enabled) {
         compare = false;
       }
 
-      updateState();
+      if (changed) {
+        resetHistory();
+        updateState();
+      }
     }
   );
 
   window.addEventListener(
     "resize",
-    updateBounds
+    () => {
+      updateCompareBounds();
+      updateMotionBounds();
+    }
   );
 
   window.addEventListener(
     "scroll",
-    updateBounds,
+    () => {
+      if (compare) {
+        updateCompareBounds();
+      }
+    },
     true
   );
 
@@ -592,13 +1101,11 @@
     "fullscreenchange",
     () => {
       setTimeout(
-        updateBounds,
+        () => {
+          updateCompareBounds();
+          updateMotionBounds();
+        },
         100
-      );
-
-      setTimeout(
-        updateBounds,
-        500
       );
     }
   );
@@ -611,15 +1118,15 @@
           attachVideo();
           updateState();
         },
-        300
+        250
       );
     }
   );
 
   const observer =
-    new MutationObserver(() => {
-      attachVideo();
-    });
+    new MutationObserver(
+      attachVideo
+    );
 
   observer.observe(
     document.documentElement,
@@ -632,37 +1139,40 @@
   chrome.storage.local.get(
     {
       enhanceEnabled: false,
-      compareEnabled: false
+      compareEnabled: false,
+      motionBlurEnabled: false,
+      motionBlurStrength: 3
     },
-    result => {
+    settings => {
       enabled =
         Boolean(
-          result.enhanceEnabled
+          settings.enhanceEnabled
         );
 
       compare =
         Boolean(
-          result.compareEnabled
+          settings.compareEnabled
         );
+
+      motionBlurEnabled =
+        Boolean(
+          settings.motionBlurEnabled
+        );
+
+      motionBlurStrength =
+        Number(
+          settings.motionBlurStrength
+        ) || 3;
 
       if (!enabled) {
         compare = false;
       }
 
-      buildOverlay();
+      buildCompareOverlay();
+
       attachVideo();
+
       updateState();
-
-      setInterval(
-        () => {
-          attachVideo();
-
-          if (compare) {
-            updateBounds();
-          }
-        },
-        1000
-      );
     }
   );
 })();
